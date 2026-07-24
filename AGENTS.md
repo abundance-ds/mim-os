@@ -2,7 +2,7 @@
 
 ## Ownership
 
-Every coding agent is responsible for the entire repo, not just their current task. "Pre-existing" and "out of scope" are not excuses to disregard broken or suboptimal code. If you encounter an issue, fix it if small, or log it in `docs/issues.md` if it requires a separate effort. Always think holistically and take full responsibility for the success of the entire application.
+Every coding agent is responsible for the entire repo, not just their current task. "Pre-existing" and "out of scope" are not excuses to disregard broken or suboptimal code. If you encounter an issue, fix it if small, or log it in `.private/issues.md` (gitignored, local) if it requires a separate effort. Always think holistically and take full responsibility for the success of the entire application.
 
 
 ## Backward Compatibility

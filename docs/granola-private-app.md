@@ -243,7 +243,7 @@ hint).
 - `mim list-tools` does not currently show dynamic app tools because it does
   not open a workspace before listing. Direct tool calls still work.
 
-The related repository issue is tracked in [issues.md](issues.md).
+The related repository issue is tracked in `.private/issues.md`.
 
 ## Operations
 
