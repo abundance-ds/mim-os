@@ -59,6 +59,7 @@ describe('skill tools', () => {
       'skill.get',
       'skill.setDisabled',
       'skill.create',
+      'skill.update',
       'skill.templateList',
       'skill.templateContent',
       'skill.inspectImport',
@@ -174,6 +175,134 @@ describe('skill tools', () => {
         body: expect.stringContaining('Follow the checklist.'),
       },
     })
+  })
+
+  it('returns revisions and atomically updates a Personal skill', async () => {
+    const original = [
+      '---',
+      'name: email-voice',
+      'description: Use when drafting email in my voice.',
+      'tools: [gmail.search, gmail.read]',
+      'unlocks: [skill.update]',
+      '---',
+      '',
+      '# Email Voice',
+      '',
+      'Write directly.',
+    ].join('\n')
+    const created = await tools.call('skill.create', {
+      name: 'email-voice',
+      content: original,
+    }, ctx) as { skill: { revision: string } }
+
+    expect(created.skill.revision).toMatch(/^[a-f0-9]{64}$/)
+    await expect(tools.call('skill.get', { name: 'email-voice' }, ctx)).resolves.toMatchObject({
+      skill: {
+        source: 'personal',
+        revision: created.skill.revision,
+      },
+    })
+
+    const replacement = original.replace('Write directly.', 'Write directly and warmly.')
+    const updated = await tools.call('skill.update', {
+      name: 'email-voice',
+      expectedRevision: created.skill.revision,
+      content: replacement,
+    }, ctx) as { skill: { revision: string } }
+
+    expect(updated.skill.revision).toMatch(/^[a-f0-9]{64}$/)
+    expect(updated.skill.revision).not.toBe(created.skill.revision)
+    expect(readFileSync(join(home, '.mim', 'skills', 'email-voice', 'SKILL.md'), 'utf-8')).toBe(replacement)
+    await expect(tools.call('skill.get', { name: 'email-voice' }, ctx)).resolves.toMatchObject({
+      skill: {
+        body: expect.stringContaining('Write directly and warmly.'),
+        revision: updated.skill.revision,
+      },
+    })
+  })
+
+  it('rejects stale or invalid Personal skill updates without changing the file', async () => {
+    const original = [
+      '---',
+      'name: email-voice',
+      'description: Use when drafting email in my voice.',
+      '---',
+      '',
+      '# Email Voice',
+      '',
+      'Write directly.',
+    ].join('\n')
+    const created = await tools.call('skill.create', {
+      name: 'email-voice',
+      content: original,
+    }, ctx) as { skill: { revision: string } }
+    const path = join(home, '.mim', 'skills', 'email-voice', 'SKILL.md')
+    const externallyChanged = original.replace('Write directly.', 'External edit.')
+    writeFileSync(path, externallyChanged, 'utf-8')
+
+    await expect(tools.call('skill.update', {
+      name: 'email-voice',
+      expectedRevision: created.skill.revision,
+      content: original.replace('Write directly.', 'Stale replacement.'),
+    }, ctx)).rejects.toThrow('changed since it was opened')
+    expect(readFileSync(path, 'utf-8')).toBe(externallyChanged)
+
+    const current = await tools.call('skill.get', { name: 'email-voice' }, ctx) as {
+      skill: { revision: string }
+    }
+    await expect(tools.call('skill.update', {
+      name: 'email-voice',
+      expectedRevision: current.skill.revision,
+      content: externallyChanged.replace('name: email-voice', 'name: somebody-else'),
+    }, ctx)).rejects.toThrow('name must match')
+    expect(readFileSync(path, 'utf-8')).toBe(externallyChanged)
+  })
+
+  it('updates only real Personal skill files', async () => {
+    await tools.call('skill.create', {
+      name: 'project-voice',
+      destination: 'project',
+    }, ctx)
+
+    await expect(tools.call('skill.update', {
+      name: 'project-voice',
+      expectedRevision: 'old',
+      content: [
+        '---',
+        'name: project-voice',
+        'description: Project voice.',
+        '---',
+        '',
+        '# Project Voice',
+      ].join('\n'),
+    }, ctx)).rejects.toThrow('Personal skill not found')
+
+    const outside = join(root, 'outside-email-voice')
+    mkdirSync(outside, { recursive: true })
+    writeFileSync(join(outside, 'SKILL.md'), [
+      '---',
+      'name: linked-voice',
+      'description: Linked voice.',
+      '---',
+      '',
+      '# Linked Voice',
+    ].join('\n'))
+    const personalRoot = join(home, '.mim', 'skills')
+    mkdirSync(personalRoot, { recursive: true })
+    symlinkSync(outside, join(personalRoot, 'linked-voice'))
+
+    await expect(tools.call('skill.update', {
+      name: 'linked-voice',
+      expectedRevision: 'old',
+      content: [
+        '---',
+        'name: linked-voice',
+        'description: Linked voice.',
+        '---',
+        '',
+        '# Changed',
+      ].join('\n'),
+    }, ctx)).rejects.toThrow('Symlink')
   })
 
   it('rejects supplied skill content whose frontmatter name does not match the requested name', async () => {

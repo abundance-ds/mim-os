@@ -782,12 +782,13 @@ describe('central AI runtime tools', () => {
     tools.call = vi.fn(async (name: string, params: Record<string, unknown>, ctx: Record<string, unknown>) => {
       calls.push({ name, params, ctx })
       return {
-        skill: {
+	        skill: {
 	          name: 'issue-work',
 	          description: 'Use when working with Mim issues.',
 	          body: '# Issue Work',
 	          tools: ['issues.list'],
 	          unlocks: ['issues.update'],
+	          revision: 'revision-1',
 	        },
       }
     }) as any
@@ -803,7 +804,9 @@ describe('central AI runtime tools', () => {
     })
 
     expect(aiTools.skill.inputSchema).toBeDefined()
-    await aiTools.skill.execute?.({ name: 'issue-work' }, {})
+    await expect(aiTools.skill.execute?.({ name: 'issue-work' }, {})).resolves.toMatchObject({
+      skill: { name: 'issue-work', revision: 'revision-1' },
+    })
 
     expect(calls).toEqual([
       {
@@ -814,6 +817,60 @@ describe('central AI runtime tools', () => {
     ])
     expect([...activated]).toEqual(['issues.list', 'issues.update'])
 	  })
+
+  it('exposes narrow Personal skill create and update wrappers', async () => {
+    const { tools, calls } = mockRegistry()
+    const aiTools = await createAiSdkTools({ tools, profile: 'chat', sessionId: 's1' })
+    const content = [
+      '---',
+      'name: email-voice',
+      'description: Use when drafting email in my voice.',
+      '---',
+      '',
+      '# Email Voice',
+    ].join('\n')
+
+    expect(aiTools.skill_create.inputSchema).toBeDefined()
+    expect(aiTools.skill_update.inputSchema).toBeDefined()
+
+    await aiTools.skill_create.execute?.({
+      name: 'email-voice',
+      content,
+    }, {})
+    await aiTools.skill_update.execute?.({
+      name: 'email-voice',
+      expectedRevision: 'revision-1',
+      content,
+    }, {})
+
+    expect(calls).toEqual([
+      {
+        name: 'skill.create',
+        params: { name: 'email-voice', content, destination: 'personal' },
+        ctx: { actor: 'ai', sessionId: 's1' },
+      },
+      {
+        name: 'skill.update',
+        params: { name: 'email-voice', expectedRevision: 'revision-1', content },
+        ctx: { actor: 'ai', sessionId: 's1' },
+      },
+    ])
+  })
+
+  it('keeps Personal skill mutations gated until a declaring skill activates', () => {
+    const allTools = ['fs_read', 'skill', 'skill_create', 'skill_update']
+    const activated = new Set<string>()
+    const gated = new Set<string>()
+    const policy = createSkillActiveToolPolicy(allTools, activated, gated)
+
+    expect(policy.activeTools).toEqual(['fs_read', 'skill'])
+
+    activated.add('skill.create')
+    activated.add('skill.update')
+    expect(policy.prepareStep()).toEqual({
+      activeTools: ['fs_read', 'skill', 'skill_create', 'skill_update'],
+    })
+  })
 
 	  it('keeps skill-declared tools out of activeTools until their skill activates', () => {
 	    const allTools = ['fs_read', 'search', 'skill', 'issues_list', 'issues_update', 'pkg_ab12cd34__startReview']
@@ -944,23 +1001,23 @@ describe('central AI runtime tools', () => {
     const gate = createPermissionGate({
       getApprovalMode: () => 'normal',
       getWorkspacePath: () => null,
-      getDynamicToolPolicy: name => name.startsWith('mail.')
-        ? { category: 'read', risk: 'low', label: `Mail: ${name}`, ownerPackageId: 'mail' }
+      getDynamicToolPolicy: name => name.startsWith('records.')
+        ? { category: 'read', risk: 'low', label: `Records: ${name}`, ownerPackageId: 'records' }
         : undefined,
       sendApprovalRequest: () => false,
     })
     return createToolRegistry(createTraceLog({ devConsole: false }), gate)
   }
 
-  function mailAgentDelegation() {
+  function recordsAgentDelegation() {
     // Mirrors the delegation streamProfileResponse builds for a profile with a
     // toolAllowlist (rootSessionId = parentSessionId = chat session, depth 0).
     return {
       rootSessionId: 'chat-1',
       parentSessionId: 'chat-1',
       depth: 0,
-      profileId: 'package:mail/mail',
-      toolAllowlist: ['mail.search'],
+      profileId: 'package:records/reviewer',
+      toolAllowlist: ['records.lookup'],
       originActor: 'ai' as const,
     }
   }
@@ -969,15 +1026,15 @@ describe('central AI runtime tools', () => {
     const tools = registryWithGate()
     const executed: Array<{ params: Record<string, unknown>; ctx: ToolContext }> = []
     tools.register({
-      name: 'mail.search',
-      description: 'Search mail threads',
+      name: 'records.lookup',
+      description: 'Look up records',
       inputSchema: { type: 'object', properties: { query: { type: 'string' } } },
       execute: async (params, ctx) => {
         executed.push({ params, ctx })
-        return { threads: [] }
+        return { records: [] }
       },
     })
-    const delegation = mailAgentDelegation()
+    const delegation = recordsAgentDelegation()
     const aiTools = await createAiSdkTools({
       tools,
       profile: 'chat',
@@ -985,16 +1042,16 @@ describe('central AI runtime tools', () => {
       subagent: delegation,
       packageTools: [
         {
-          name: 'mail.search',
-          description: 'Search mail threads',
-          packageId: 'mail',
-          packageName: 'Mail',
+          name: 'records.lookup',
+          description: 'Look up records',
+          packageId: 'records',
+          packageName: 'Records',
           inputSchema: { type: 'object', properties: { query: { type: 'string' } } },
         },
       ],
     })
 
-    await expect(aiTools.mail_search.execute?.({ query: 'invoice' }, {})).resolves.toEqual({ threads: [] })
+    await expect(aiTools.records_lookup.execute?.({ query: 'invoice' }, {})).resolves.toEqual({ records: [] })
     expect(executed).toHaveLength(1)
     expect(executed[0].params).toEqual({ query: 'invoice' })
     expect(executed[0].ctx).toMatchObject({ actor: 'ai', sessionId: 'chat-1', subagent: delegation })
@@ -1004,9 +1061,9 @@ describe('central AI runtime tools', () => {
     const tools = registryWithGate()
     const executed: Array<Record<string, unknown>> = []
     tools.register({
-      name: 'mail.send',
-      description: 'Send a mail draft',
-      inputSchema: { type: 'object', properties: { draftId: { type: 'string' } } },
+      name: 'records.delete',
+      description: 'Delete a record',
+      inputSchema: { type: 'object', properties: { id: { type: 'string' } } },
       execute: async (params) => {
         executed.push(params)
         return { ok: true }
@@ -1016,20 +1073,20 @@ describe('central AI runtime tools', () => {
       tools,
       profile: 'chat',
       sessionId: 'chat-1',
-      subagent: mailAgentDelegation(),
+      subagent: recordsAgentDelegation(),
       packageTools: [
         {
-          name: 'mail.send',
-          description: 'Send a mail draft',
-          packageId: 'mail',
-          packageName: 'Mail',
-          inputSchema: { type: 'object', properties: { draftId: { type: 'string' } } },
+          name: 'records.delete',
+          description: 'Delete a record',
+          packageId: 'records',
+          packageName: 'Records',
+          inputSchema: { type: 'object', properties: { id: { type: 'string' } } },
         },
       ],
     })
 
-    await expect(aiTools.mail_send.execute?.({ draftId: 'd1' }, {}))
-      .rejects.toThrow('mail.send is outside the delegated tool surface')
+    await expect(aiTools.records_delete.execute?.({ id: 'r1' }, {}))
+      .rejects.toThrow('records.delete is outside the delegated tool surface')
     expect(executed).toHaveLength(0)
   })
 
@@ -1581,7 +1638,7 @@ describe('central AI runtime tools', () => {
     expect(calls).toEqual([])
   })
 
-  it('gates tools dynamically via skill unlocks, not a hardcoded list', () => {
+  it('gates ordinary tools dynamically via skill unlocks', () => {
     const allTools = ['fs_read', 'search', 'skill', 'my_tool', 'other_tool']
     const activated = new Set<string>()
     const gated = new Set(['my_tool'])

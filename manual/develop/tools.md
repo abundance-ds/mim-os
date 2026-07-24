@@ -271,6 +271,7 @@ approval.
 | `skill.get` | Activate a skill by name or package-qualified id and return its SKILL.md body plus declared tools. | read | auto |
 | `skill.setDisabled` | Enable or disable an authored skill globally by writing skills.disabled in ~/.mim/config.yaml. | **mutate** | ask |
 | `skill.create` | Create a new skill for You, the current Project, or the connected Team. | **mutate** | ask |
+| `skill.update` | Replace one Personal SKILL.md if it has not changed since it was read. | **mutate** | ask |
 | `skill.templateList` | List built-in starter templates for creating authored skills. | read | auto |
 | `skill.templateContent` | Render a built-in starter skill template without writing files. | read | auto |
 | `skill.inspectImport` | Inspect a SKILL.md folder before importing it into You, Project, or Team. | read | auto |

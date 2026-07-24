@@ -78,6 +78,26 @@ sync belongs to the single Team connection.
 Activated and composer-selected skills retain their origin and editor path.
 Chat renders the origin and can open the same `SKILL.md`.
 
+## Agent-authored Personal skills
+
+Mim can create and maintain a Personal skill from Chat when an active skill
+explicitly unlocks the mutation tools:
+
+- `skill_create` writes one complete `SKILL.md` under
+  `~/.mim/skills/<name>/`. Its AI surface is Personal-only and does not expose
+  arbitrary supporting-file writes.
+- `skill.get` includes a SHA-256 `revision` for Personal skills.
+- `skill_update` replaces that Personal `SKILL.md` only when
+  `expectedRevision` still matches. The replacement is validated and written
+  atomically; stale revisions fail so the agent must reload and reconcile.
+- `skill.update` cannot mutate Mim, Team, Project, or app-provided skills.
+
+The `mim` Team source's `build-email-voice` skill uses this path to distill a
+bounded sample of sent Gmail into one Personal `email-voice` skill. It stores
+guidance, not a mail corpus, never sends email, and requires the generated
+skill to evaluate every relevant drafting interaction for durable learning.
+Weak, one-off, recipient-specific, or ambiguous evidence produces no update.
+
 ## Instructions
 
 Instructions use the same origin vocabulary. The prompt composes them from

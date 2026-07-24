@@ -5,10 +5,13 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   statSync,
+  unlinkSync,
   writeFileSync,
 } from 'fs'
+import { createHash, randomBytes } from 'crypto'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
 import { parse as parseYaml } from 'yaml'
 import {
@@ -89,7 +92,12 @@ export function registerSkillTools(tools: ToolRegistry, options: SkillToolOption
       if (!name) throw new Error('Missing required parameter: name')
       const skill = loader().get(name)
       if (!skill) throw new Error(`Skill not found: ${name}`)
-      return { skill: decorateSkillOrigin(skill, tools, home) }
+      const decorated = decorateSkillOrigin(skill, tools, home)
+      return {
+        skill: skill.source === 'personal'
+          ? { ...decorated, revision: skillRevision(readFileSync(skill.path, 'utf-8')) }
+          : decorated,
+      }
     },
   })
 
@@ -159,6 +167,56 @@ export function registerSkillTools(tools: ToolRegistry, options: SkillToolOption
           dir,
           path,
           editorPath: editorPathForDestination(destination, name),
+          revision: skillRevision(content),
+        },
+      }
+    },
+  })
+
+  tools.register({
+    name: 'skill.update',
+    description: 'Replace one Personal SKILL.md if it has not changed since it was read.',
+    inputSchema: objectSchema({
+      name: { type: 'string' },
+      expectedRevision: { type: 'string' },
+      content: { type: 'string' },
+    }, ['name', 'expectedRevision', 'content']),
+    execute: async (params) => {
+      const name = requireSkillName(params.name)
+      const expectedRevision = requireNonEmptyString(params.expectedRevision, 'expectedRevision')
+      const content = requireTextParam(params.content, 'content')
+      const dir = join(personalDir, name)
+      const path = join(dir, 'SKILL.md')
+
+      if (!existsSync(path)) throw new Error(`Personal skill not found: ${name}`)
+      if (lstatSync(dir).isSymbolicLink()) {
+        throw new Error(`Symlink paths are not allowed: ${dir}`)
+      }
+      assertNoExistingSymlinkParent(personalDir, path)
+      const pathStat = lstatSync(path)
+      if (pathStat.isSymbolicLink()) throw new Error(`Symlink paths are not allowed: ${path}`)
+      if (!pathStat.isFile()) throw new Error(`Personal skill SKILL.md is not a file: ${name}`)
+
+      const previous = readFileSync(path, 'utf-8')
+      if (skillRevision(previous) !== expectedRevision) {
+        throw new Error(`Personal skill changed since it was opened: ${name}`)
+      }
+      const parsed = validateSkillCreateContent(content, name)
+
+      atomicWriteText(path, content)
+      emitChanged()
+      ensureEditorDocuments()
+      return {
+        skill: {
+          id: name,
+          name,
+          description: parsed.description,
+          source: 'personal',
+          sourceName: 'You',
+          dir,
+          path,
+          editorPath: editorPathForDestination('personal', name),
+          revision: skillRevision(content),
         },
       }
     },
@@ -499,6 +557,11 @@ function requireNonEmptyString(value: unknown, key: string): string {
   return text
 }
 
+function requireTextParam(value: unknown, key: string): string {
+  if (typeof value !== 'string' || !value.trim()) throw new Error(`Missing required parameter: ${key}`)
+  return value
+}
+
 function optionalStringParam(value: unknown): string | undefined {
   if (value === undefined) return undefined
   if (typeof value !== 'string') throw new Error('Parameter must be a string')
@@ -660,4 +723,19 @@ function titleFromName(name: string): string {
     .filter(Boolean)
     .map(part => part.slice(0, 1).toUpperCase() + part.slice(1))
     .join(' ')
+}
+
+function skillRevision(content: string): string {
+  return createHash('sha256').update(content).digest('hex')
+}
+
+function atomicWriteText(path: string, content: string): void {
+  const tmp = `${path}.tmp-${randomBytes(6).toString('hex')}`
+  try {
+    writeFileSync(tmp, content, 'utf-8')
+    renameSync(tmp, path)
+  } catch (err) {
+    try { unlinkSync(tmp) } catch { /* tmp may not exist */ }
+    throw err
+  }
 }

@@ -331,6 +331,7 @@ const TOOL_POLICIES: Record<string, ToolPolicy> = {
   'skill.get': { category: 'read', risk: 'low', targetParam: 'name' },
   'skill.setDisabled': { category: 'settings', risk: 'medium', targetParam: 'name' },
   'skill.create': { category: 'write', risk: 'medium', targetParam: 'name' },
+  'skill.update': { category: 'write', risk: 'medium', targetParam: 'name' },
   'skill.templateList': { category: 'read', risk: 'low' },
   'skill.templateContent': { category: 'read', risk: 'low', targetParam: 'templateId' },
   'skill.inspectImport': { category: 'read', risk: 'medium', targetParam: 'folder' },

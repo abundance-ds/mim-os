@@ -105,6 +105,19 @@ Project checkout. Team sync never moves or deletes Project data.
 For the repository layout, first-time setup, authentication, activation, and
 troubleshooting, see [docs/team.md](docs/team.md).
 
+## Skills
+
+Skills are file-native instructions that teach Mim recurring work without
+requiring a new app. The connected `mim` Team source provides a
+`build-email-voice` skill that uses the existing Gmail connection to learn a
+person's durable writing tendencies, confirm them once, and create a Personal
+`email-voice` skill. Drafts stay in Chat as Markdown, and the generated skill
+updates itself only when explicit or repeated evidence supports a lasting
+preference.
+
+See [docs/skills.md](docs/skills.md) for origins, precedence, tool gating, and
+revision-safe Personal skill updates.
+
 ## Apps
 
 Apps come directly from three owned locations: Mim build resources, the

@@ -64,6 +64,7 @@ interface ActivatedSkill {
   name: string
   description?: string
   body?: string
+  revision?: string
   tools: string[]
   unlocks: string[]
 }
@@ -603,6 +604,32 @@ export async function createAiSdkTools({
       },
     }),
 
+    skill_create: tool({
+      description: 'Create one Personal skill from a complete SKILL.md document. The name in the document frontmatter must match name.',
+      inputSchema: z.object({
+        name: z.string().min(1),
+        content: z.string().min(1).describe('Complete SKILL.md including YAML frontmatter'),
+      }),
+      execute: async ({ name, content }) => call('skill.create', {
+        name,
+        content,
+        destination: 'personal',
+      }),
+    }),
+
+    skill_update: tool({
+      description: 'Replace one Personal skill from a complete SKILL.md document, guarded by the revision returned when the skill was activated.',
+      inputSchema: z.object({
+        name: z.string().min(1),
+        expectedRevision: z.string().min(1),
+        content: z.string().min(1).describe('Complete replacement SKILL.md including YAML frontmatter'),
+      }),
+      execute: async ({ name, expectedRevision, content }) => call('skill.update', {
+        name,
+        expectedRevision,
+        content,
+      }),
+    }),
   }
 
   // Security property: static tools win over dynamic package tools. A package cannot
@@ -1273,7 +1300,13 @@ export function createSkillActiveToolPolicy(
   gatedToolNames: Set<string>,
 ) {
   // Normalize through aiToolKey so dotted unlock names match sanitized SDK keys
-  const gated = new Set([...gatedToolNames].map(aiToolKey))
+  // Personal-skill mutation is intrinsically skill-gated: if the declaring
+  // Team skill is unavailable or disabled, these tools must stay hidden.
+  const gated = new Set([
+    ...gatedToolNames,
+    'skill.create',
+    'skill.update',
+  ].map(aiToolKey))
   // The activation tool must always stay visible, whatever a skill declares.
   gated.delete('skill')
   const allNormalized = allToolNames.map(aiToolKey)
@@ -1388,6 +1421,7 @@ function normalizeActivatedSkill(raw: unknown): ActivatedSkill {
     name,
     description: typeof item.description === 'string' ? item.description : undefined,
     body: typeof item.body === 'string' ? item.body : undefined,
+    revision: typeof item.revision === 'string' ? item.revision : undefined,
     tools: Array.isArray(item.tools) ? item.tools.filter((toolName): toolName is string => typeof toolName === 'string') : [],
     unlocks: Array.isArray(item.unlocks) ? item.unlocks.filter((toolName): toolName is string => typeof toolName === 'string') : [],
   }

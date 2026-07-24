@@ -869,6 +869,7 @@ describe('app, skill, and app-owned named tool policies', () => {
     expect(getToolPolicy('skill.get')).toMatchObject({ category: 'read', risk: 'low', targetParam: 'name' })
     expect(getToolPolicy('skill.setDisabled')).toMatchObject({ category: 'settings', risk: 'medium', targetParam: 'name' })
     expect(getToolPolicy('skill.create')).toMatchObject({ category: 'write', risk: 'medium', targetParam: 'name' })
+    expect(getToolPolicy('skill.update')).toMatchObject({ category: 'write', risk: 'medium', targetParam: 'name' })
     expect(getToolPolicy('skill.templateList')).toMatchObject({ category: 'read', risk: 'low' })
     expect(getToolPolicy('skill.templateContent')).toMatchObject({ category: 'read', risk: 'low', targetParam: 'templateId' })
     expect(getToolPolicy('app.status')).toMatchObject({ category: 'read', risk: 'low' })
@@ -934,7 +935,7 @@ describe('app-owned named tool permission enforcement', () => {
 
   it('denies skill catalog tools to apps', async () => {
     const { gate } = makeGate({ packagePermissions: { workspace: { read: true, write: true } } })
-    for (const name of ['skill.list', 'skill.get', 'skill.setDisabled', 'skill.create', 'skill.templateList', 'skill.templateContent']) {
+    for (const name of ['skill.list', 'skill.get', 'skill.setDisabled', 'skill.create', 'skill.update', 'skill.templateList', 'skill.templateContent']) {
       await expect(gate.check(tool(name), {}, pkg)).rejects.toThrow('cannot access AI skill activation state')
     }
   })

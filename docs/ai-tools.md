@@ -134,6 +134,22 @@ chat tool set until their skill activates, either by the model calling
 `/api/ai/chat` body. The controlled set is derived from `skill.list` per request
 (`listSkillUnlocks`); a skill that unlocks a base tool name gates that tool for
 every chat. `tools:` is descriptive catalog metadata. See [skills.md](skills.md).
+`skill_create` and `skill_update` are additionally always hidden until an
+active skill unlocks them, including when their declaring Team skill is
+unavailable or disabled.
+
+Chat also defines two narrow Personal-skill mutation wrappers:
+
+- `skill_create` calls `skill.create` with `destination: personal` and one
+  complete `SKILL.md`.
+- `skill_update` calls `skill.update` with one complete replacement plus the
+  current `expectedRevision`.
+
+They are not general filesystem tools. The `mim` Team's `build-email-voice`
+skill unlocks both while constructing a Personal voice skill; the generated
+`email-voice` skill unlocks only `skill_update` for restrained,
+evidence-based self-learning. Both kernel calls remain medium-risk writes
+behind the normal permission gate.
 
 ## Backend AI And Document Tools
 
