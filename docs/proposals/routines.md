@@ -40,7 +40,7 @@ What exists today, and why none of it is this:
 - **`AgentProfile` is a mounted primitive.** `src/main/ai/agentMounts.ts`
   resolves app `agents` exports into profiles with tool visibility
   intersection, template-var resolution, and per-turn skill pre-activation
-  ([agents-as-apps.md](agents-as-apps.md), implemented). Routines reuse this
+  (agents-as-apps, implemented). Routines reuse this
   wholesale: a routine either names a mounted agent or runs the default chat
   profile under its own visible-tool filter.
 - **Package jobs are the imperative cousin, not the answer.**
@@ -474,11 +474,11 @@ permission design is not optional decoration.
   declarative approval policy (visibility filter + approval grant + park),
   built once in the gate here and consumed there. Phases 1–5 need nothing
   from it.
-- [context-compaction.md](context-compaction.md) — compaction in the AI
+- context-compaction (implemented) — compaction in the AI
   runtime. A nightly sweep that makes hundreds of tool calls dies at the
   context ceiling without it; it lands first, and the runner assumes it
   rather than growing its own truncation.
-- [slack-listener.md](slack-listener.md) — the Slack Socket Mode listener
+- slack-listener (implemented) — the Slack Socket Mode listener
   as a fifth trigger kind (`trigger: slack:`), with conversational
   per-thread sessions on top of the standard runner and grant mechanics.
 

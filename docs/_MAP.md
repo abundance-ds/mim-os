@@ -69,7 +69,7 @@ Each entry is a one-liner with the source cluster and relevant docs. Read the li
 - **File tools.** read/write/edit/create/delete/list/rename/copy/trash, workspace-scoped, stale-write protection via content hashes. `src/main/tools/fs.ts`, `workspaceFileWatcher.ts`.
 - **Local file history.** Optional per-file recovery under `.mim/history/`, independent of git, with resumable authored-text baselines, automatic exact/daily/weekly retention, and a soft byte budget. The normal Project control is on/off; technical storage controls live under Advanced. `src/main/history/`, `tools/history.ts`. UI: `HistoryRail.vue`, `StorageSettingsPanel.vue`. Docs: [history.md](history.md).
 - **Sessions.** Chat session CRUD, atomic JSON in `.mim/sessions/`, manifest cache, and durable child-thread metadata. `src/main/sessions.ts`, `sessionManifest.ts`.
-- **Subagents.** Durable AI-created child sessions with asynchronous queueing, event-driven waits, scheduler lease release, safe-boundary steering, contextual follow-ups, interruption/stop, result paging, inherited authority, MCP exposure, and Navigator runs. `src/main/subagents/`, `tools/subagents.ts`, `ai/aiRuntime.ts`, `security/gate.ts`, `src/renderer/stores/runs.ts`. Docs: [subagents.md](subagents.md), design rationale: [proposals/subagents.md](proposals/subagents.md).
+- **Subagents.** Durable AI-created child sessions with asynchronous queueing, event-driven waits, scheduler lease release, safe-boundary steering, contextual follow-ups, interruption/stop, result paging, inherited authority, MCP exposure, and Navigator runs. `src/main/subagents/`, `tools/subagents.ts`, `ai/aiRuntime.ts`, `security/gate.ts`, `src/renderer/stores/runs.ts`. Docs: [subagents.md](subagents.md).
 - **Routines.** Team and Project definitions resolved into one catalog with Project overrides; revision-aware create/edit/duplicate/Trash lifecycle; machine-local four-state activation, visible machine ownership, and run state under `.mim/routines/`; manual chat-turn runs; desktop and always-on schedule/file/webhook/Slack automation; isolated scheduled-run retry; source-file live refresh; authority review; routine session metadata; and the dense Routines work surface. `src/main/routines/`, `tools/routines.ts`, `server/server.ts`, `headless.ts`, `sessions.ts`, `src/renderer/components/routines/`, `src/renderer/stores/routines.ts`. Docs: [routines.md](routines.md), [design-system.md](design-system.md#617-routines-work-surface).
 - **Workspace.** Boot (restore last or create default), `mim.yaml` contract (schema, init detection, scaffold), scoped open-file watcher. `src/main/workspace/`. Docs: [git.md](git.md) for sync.
 - **Git tools.** Status/diff/log/commit/pull/push plus managed Project sync with Git/LFS preflight, open/save/quit lifecycle automation, offline retry, and conflict-copy preservation. `src/main/git.ts`, `src/main/sync/`, `tools/git.ts`, `tools/sync.ts`.
@@ -121,7 +121,7 @@ Each entry is a one-liner with the source cluster and relevant docs. Read the li
 
 ### Main Process — Integrations
 
-- **Slack & Google.** Keychain-backed connectors, Google browser OAuth, kernel tools, AI tool builders, and Settings > Tools availability policy. Slack also has routine-listener runtime: bot/app-token credential tools, one-shot capability-based bot setup/check tools, Socket Mode listener lifecycle, metadata-only event ledger, durable Slack thread-to-Mim-session routing, routine dispatcher, and bot thread replies. Data tools are exposed over MCP when connected and enabled. AI agent can manage connection lifecycle (connect, disconnect, configure policy) via `connections_status`, `google_set_oauth_client`, `google_connect`, `slack_connect`, `slack_bot_connect`, `slack_bot_setup`, `slack_bot_check`, `connections_configure` tools. File-based credential ingestion reads secrets server-side so they never enter model context. `src/main/integrations/`, `src/main/tools/toolPolicy.ts`. Docs: [integrations.md](integrations.md), [proposals/slack-listener.md](proposals/slack-listener.md).
+- **Slack & Google.** Keychain-backed connectors, Google browser OAuth, kernel tools, AI tool builders, and Settings > Tools availability policy. Slack also has routine-listener runtime: bot/app-token credential tools, one-shot capability-based bot setup/check tools, Socket Mode listener lifecycle, metadata-only event ledger, durable Slack thread-to-Mim-session routing, routine dispatcher, and bot thread replies. Data tools are exposed over MCP when connected and enabled. AI agent can manage connection lifecycle (connect, disconnect, configure policy) via `connections_status`, `google_set_oauth_client`, `google_connect`, `slack_connect`, `slack_bot_connect`, `slack_bot_setup`, `slack_bot_check`, `connections_configure` tools. File-based credential ingestion reads secrets server-side so they never enter model context. `src/main/integrations/`, `src/main/tools/toolPolicy.ts`. Docs: [integrations.md](integrations.md).
 
 ### Main Process — Observability
 
@@ -183,7 +183,7 @@ exercises the current loader/runtime contract.
 
 ### Documentation Pipeline
 
-- **Docs generators.** Deterministic scripts that generate developer documentation pages from source data. `scripts/docs-gen/`. Run via `npm run docs:gen` (requires `npm run build` for the tool catalog). Proposal: [proposals/user-manual.md](proposals/user-manual.md) §4.
+- **Docs generators.** Deterministic scripts that generate developer documentation pages from source data. `scripts/docs-gen/`. Run via `npm run docs:gen` (requires `npm run build` for the tool catalog).
 - **Claim lint.** Validates manual page claims (tool names, shortcuts, settings refs, internal links) against source of truth. `scripts/docs-lint.mjs`. Run via `npm run docs:lint`.
 
 ### Docs Index
@@ -227,18 +227,13 @@ exercises the current loader/runtime contract.
 
 ### Proposals
 
-- [proposals/team-source.md](proposals/team-source.md) — **implemented (all thirteen phases complete)**. Major Mim restructure around Project, You, and one writable Git-backed Team source; concrete Settings/Files/Chat design, capability resolution, local-first collaboration, clean-break removal inventory, and completed implementation programme.
-- [proposals/r-first-class.md](proposals/r-first-class.md) — **implemented** (phases 1-5; phase 6 deferred). First-class R/Rmd/Quarto: `code.run` execution primitive, plot/artifact viewing, Cmd+Enter send-to-terminal, render loop, R modelling skill.
+Open proposals only. Implemented proposals are deleted once their content is
+reflected in the current-state docs; git history retains them.
+
 - [proposals/ai-native-browser.md](proposals/ai-native-browser.md) — two-layer web access plan: cheap reader plus AI-native live browser with bounded observations and compact action refs.
-- [proposals/popout-editor-window.md](proposals/popout-editor-window.md) — **implemented** (phases 0-3; phase 4 deferred). Pop-out editor windows: move any editor tab into its own OS window and back, with full tab-state transfer, per-window close guards, focused-window menu routing, and macOS native touches.
 - [proposals/tools-settings-tab.md](proposals/tools-settings-tab.md) — Settings > Tools plan for unified AI/MCP tool availability policy.
-- [proposals/agents-as-apps.md](proposals/agents-as-apps.md) — **implemented** (phases 0-4; phase 5 deferred). Agents as an app contribution type: `AgentProfile` primitive extracted from the chat runtime, `export const agents` mounting, agent sessions in the native chat surface, starter template and authoring docs.
-- [proposals/user-manual.md](proposals/user-manual.md) — user manual + developer docs for mim-web: positioning, IA, content pipeline, subagent authoring process, design guide.
 - [proposals/routines.md](proposals/routines.md) — Routines: workspace-owned standing prompts that create runs; desktop starts stream through the normal chat transcript, headless scheduler runner, visible tools plus approval grants, scheduler ownership.
-- [proposals/slack-listener.md](proposals/slack-listener.md) — Slack-triggered routines over Socket Mode: implemented trigger/ledger/dispatcher/listener runtime, responder bound as a routine with a `slack` trigger, durable per-thread Mim sessions, capability-based setup, bot thread replies, and deferred replay/parking.
 - [proposals/slack-transport.md](proposals/slack-transport.md) — proposed clean break: Slack as a first-class transport to the workspace's default Mim agent, with one standing-consent decision per enabled channel, durable threaded conversations, full normal tool/subagent utility, and no Slack-specific permission system.
-- [proposals/context-compaction.md](proposals/context-compaction.md) — context compaction as a view over the immutable session log: `buildModelContext`, deterministic pre-pass, append-only LLM summary records, overflow recovery.
-- [proposals/subagents.md](proposals/subagents.md) — **implemented**. Consolidated design for durable agent-created threads: async spawn, event-driven wait, steering/follow-ups, interruption, inherited lineage authority, result paging, MCP, and Navigator visibility.
 - [proposals/trust-model-v1.md](proposals/trust-model-v1.md) — one Google connection shared by core and apps: written trust-model ruling, `ctx.google` runtime capability, `gmail.modify` capability, gate prefix-block removal, Mail app OAuth deletion, deferred broker/sandbox work with a revisit trigger.
 
 ## File Tree

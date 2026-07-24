@@ -93,4 +93,3 @@ rescans after file changes. No per-app registry download lifecycle exists.
 - [Package runtime](package-runtime.md)
 - [Skills](skills.md)
 - [Team source and setup](team.md)
-- [Accepted Team-source design](proposals/team-source.md)
