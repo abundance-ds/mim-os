@@ -79,7 +79,7 @@ Each entry is a one-liner with the source cluster and relevant docs. Read the li
 - **Bridge tools.** Cross-surface messaging: `editor.open`, `terminal.run`, `chat.send`. `src/main/tools/bridge.ts`.
 - **Editor state tool.** `editor.state` (MCP: `editor_state`): open tabs + active document snapshot, pushed by the renderer and cached in main. `src/main/tools/editorState.ts`.
 - **Headless CLI.** `mim` command over the shared tool registry; no Electron. `mim always-on` adds background Team/Project sync, schedule/file/webhook/Slack automation, heartbeat status, and graceful shutdown for an operator-managed machine. `src/main/cli.ts`, `headless.ts`. Docs: [cli.md](cli.md).
-- **MCP bridge.** Local stdio bridge from external CLI agents to the running desktop. `src/main/mcp/`, `src/main/server/server.ts`. Docs: [mcp.md](mcp.md).
+- **MCP bridge.** Local stdio bridge from external CLI agents to the running desktop, with atomic process-owned discovery and ownership-safe restart cleanup. `src/main/mcp/`, `src/main/server/server.ts`. Docs: [mcp.md](mcp.md).
 - **Preload bridge.** `window.kernel` IPC gateway. `src/preload/index.ts`.
 
 ### Main Process — AI

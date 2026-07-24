@@ -108,7 +108,11 @@ import { createKeytarSecretStore } from '@main/integrations/secrets.js'
 import { classifyWorkspace, scaffoldWorkspace } from '@main/workspace/workspaceContract.js'
 import { setAgentContextTeamReader, setAgentContextAppsResolver, setAgentContextContributionsProvider, setAgentContextLocalPackagesProvider, type AgentContextApp } from '@main/ai/agentContext.js'
 import { resolveBootWorkspace, recordLastWorkspace, isDefaultWorkspace } from '@main/workspace/workspaceBoot.js'
-import { deleteMcpDiscoveryFile, writeMcpDiscoveryFile } from '@main/mcp/discovery.js'
+import {
+  deleteMcpDiscoveryFile,
+  writeMcpDiscoveryFile,
+  type McpDiscovery,
+} from '@main/mcp/discovery.js'
 import { createWorkspaceFileWatcher } from '@main/workspace/workspaceFileWatcher.js'
 import { toSlashPath, userHomeDir } from '@main/platform.js'
 import {
@@ -160,9 +164,13 @@ let appUpdateInterval: ReturnType<typeof setInterval> | null = null
 let historyBaselineTimer: ReturnType<typeof setTimeout> | null = null
 let routineTickerInterval: ReturnType<typeof setInterval> | null = null
 let routineAutomationStop: (() => Promise<void>) | null = null
+let packageJobsStop: (() => void) | null = null
+let agentSessionsStop: (() => void) | null = null
+let desktopServerClose: (() => void) | null = null
 let backgroundSync: ReturnType<typeof createBackgroundSync> | null = null
 let quitSyncPromise: Promise<void> | null = null
 let quitSyncComplete = false
+let ownedMcpDiscovery: McpDiscovery | null = null
 
 function finishBackgroundSyncThenQuit(): void {
   if (quitSyncPromise) return
@@ -960,6 +968,7 @@ async function boot(): Promise<void> {
       mainWindow?.webContents.send(event, data)
     },
   })
+  packageJobsStop = () => packageJobs.cancelAll()
   packageJobs.reconcileStaleRuns()
   registerPackageTools(tools, packages, packageEnablement, {
     invalidate: (id) => packageRuntime.invalidate(id),
@@ -1020,6 +1029,7 @@ async function boot(): Promise<void> {
       return server.generateTaskLabel(scrollbackText)
     },
   })
+  agentSessionsStop = () => agentSessions.stopAll()
   agentSessions.reconcileStaleSessions()
   registerAgentTools(tools, { sessions: agentSessions })
 
@@ -1053,6 +1063,20 @@ async function boot(): Promise<void> {
         error: 'Routine automation is not available',
       }),
   })
+  desktopServerClose = () => {
+    server?.close()
+    server = null
+  }
+  const discovery = {
+    port: server.port,
+    token: server.createMcpToken('mcp'),
+  }
+  try {
+    writeMcpDiscoveryFile(discovery, HOME_DIR)
+    ownedMcpDiscovery = discovery
+  } catch (err) {
+    console.error('[mcp] Failed to write discovery file', err)
+  }
   await routineAutomation?.start()
   await slackListener?.refresh().catch((err) => {
     console.error('[slack] listener refresh failed', err)
@@ -1067,15 +1091,6 @@ async function boot(): Promise<void> {
     })
   }, 60_000)
   routineTickerInterval.unref?.()
-  try {
-    writeMcpDiscoveryFile({
-      port: server.port,
-      token: server.createMcpToken('mcp'),
-    }, HOME_DIR)
-  } catch (err) {
-    console.error('[mcp] Failed to write discovery file', err)
-  }
-
   async function openWorkspacePath(path: string): Promise<string> {
     await subagentManagerRef?.interruptActive()
     await tools.call('workspace.open', { path }, { actor: 'user' })
@@ -1585,6 +1600,10 @@ app.on('will-quit', () => {
   }
   void routineAutomationStop?.()
   routineAutomationStop = null
+  packageJobsStop?.()
+  packageJobsStop = null
+  agentSessionsStop?.()
+  agentSessionsStop = null
   if (historyBaselineTimer != null) {
     clearTimeout(historyBaselineTimer)
     historyBaselineTimer = null
@@ -1597,7 +1616,12 @@ app.on('will-quit', () => {
   workspaceFileWatcher = null
   backgroundSync?.stop()
   backgroundSync = null
-  deleteMcpDiscoveryFile(HOME_DIR)
+  desktopServerClose?.()
+  desktopServerClose = null
+  if (ownedMcpDiscovery) {
+    deleteMcpDiscoveryFile(HOME_DIR, ownedMcpDiscovery)
+    ownedMcpDiscovery = null
+  }
   closeSearchDb()
   confirmAppQuit = null
 })

@@ -323,6 +323,23 @@ describe('agent sessions', () => {
     expect(events.at(-1)).toMatchObject({ type: 'session.exited', session: { status: 'stopped' } })
   })
 
+  it('stops every live agent session during app shutdown', () => {
+    const { sessions, ptys, revokedMcpTokens } = makeHarness()
+    const first = sessions.launch(claude).record
+    const second = sessions.launch(claude).record
+
+    sessions.stopAll()
+
+    expect(ptys.map(pty => pty.kill.mock.calls.length)).toEqual([1, 1])
+    expect(sessions.activeSessionCount()).toBe(0)
+    expect(sessions.get(first.sessionId)?.status).toBe('stopped')
+    expect(sessions.get(second.sessionId)?.status).toBe('stopped')
+    expect(revokedMcpTokens).toEqual([
+      `mcp-token-for-${first.sessionId}`,
+      `mcp-token-for-${second.sessionId}`,
+    ])
+  })
+
   it('stop on a stale running record (no live pty) transitions it to stopped', () => {
     const staleId = randomUUID()
     atomicWriteJson(join(sessionsDir(), `${staleId}.json`), {

@@ -42,7 +42,11 @@ On desktop start, Mim writes `~/.mim/server.json`:
 
 The file is auth material. It is written atomically with owner-only permissions
 where the filesystem supports chmod. On app quit, Mim deletes it best-effort.
-That discovery token is valid for the desktop process lifetime.
+That discovery token is valid for the desktop process lifetime. The file is
+published immediately after the loopback server starts, before routine and
+integration background services initialize. Cleanup is ownership-checked: an
+older desktop process finishing a slow quit cannot delete a newer process's
+discovery record.
 
 Agent sessions launched from Settings > Apps & agents receive per-session `MIM_PORT`
 and `MIM_TOKEN` environment variables. Running `mim mcp` outside Mim falls back

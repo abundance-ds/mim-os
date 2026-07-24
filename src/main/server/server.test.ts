@@ -701,6 +701,17 @@ describe('app server', () => {
     })).resolves.toMatchObject({ id: 'identify-2', result: { type: 'mcp' } })
   })
 
+  it('closes active WebSocket clients when the desktop server shuts down', async () => {
+    server = await createServer(makeTools(), makePackages([]))
+    const socket = await openSocket(server.port)
+    const closed = new Promise<void>(resolveClose => socket.once('close', () => resolveClose()))
+
+    server.close()
+
+    await closed
+    expect(socket.readyState).toBe(WebSocket.CLOSED)
+  })
+
   it('refuses packages.list before identification so foreign pages cannot enumerate packages', async () => {
     const call = vi.fn()
     server = await createServer(makeTools(call), makePackages([addPackage()]))

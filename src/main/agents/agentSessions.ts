@@ -206,6 +206,7 @@ export interface AgentSessions {
   launch(agent: DetectedAgent, userArgs?: string[]): { record: AgentSessionRuntime; ptyId: number }
   resume(sessionId: string, agent: DetectedAgent): { record: AgentSessionRuntime; ptyId: number }
   stop(sessionId: string): AgentSessionRuntime
+  stopAll(): void
   list(options?: { includeArchived?: boolean; archived?: boolean }): AgentSessionRuntime[]
   get(sessionId: string, options?: { scrollback?: boolean }): AgentSessionRuntime | null
   rename(sessionId: string, title: string): AgentSessionRuntime
@@ -628,6 +629,10 @@ export function createAgentSessions(options: AgentSessionsOptions): AgentSession
     return withRuntime(live.record)
   }
 
+  function stopAll(): void {
+    for (const sessionId of [...active.keys()]) stop(sessionId)
+  }
+
   function list(listOptions: { includeArchived?: boolean; archived?: boolean } = {}): AgentSessionRuntime[] {
     const records: AgentSessionRuntime[] = []
     for (const record of readAllRecords()) {
@@ -712,5 +717,5 @@ export function createAgentSessions(options: AgentSessionsOptions): AgentSession
     live.mcpToken = undefined
   }
 
-  return { launch, resume, stop, list, get, rename, archive, delete: deleteSession, reconcileStaleSessions, activeSessionCount }
+  return { launch, resume, stop, stopAll, list, get, rename, archive, delete: deleteSession, reconcileStaleSessions, activeSessionCount }
 }

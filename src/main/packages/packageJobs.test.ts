@@ -168,6 +168,29 @@ describe('app job runner', () => {
     expect(final.events.map(event => event.type)).toContain('job.cancelled')
   })
 
+  it('cancels every in-flight job during app shutdown', async () => {
+    writePackage(`
+      export const jobs = {
+        wait: {
+          concurrency: 'parallel',
+          async run(ctx) {
+            await new Promise(resolve => ctx.abort.signal.addEventListener('abort', resolve, { once: true }))
+            ctx.abort.throwIfAborted()
+          }
+        }
+      }
+    `)
+    const runner = await makeRunner()
+    const first = await runner.start('worker', 'wait')
+    const second = await runner.start('worker', 'wait')
+
+    runner.cancelAll()
+
+    await expect(runner.waitForRun(first.runId)).resolves.toMatchObject({ status: 'cancelled' })
+    await expect(runner.waitForRun(second.runId)).resolves.toMatchObject({ status: 'cancelled' })
+    expect(runner.activeRunCount()).toBe(0)
+  })
+
   it('rejects a second active run for single-concurrency jobs', async () => {
     writePackage(`
       let releaseRun

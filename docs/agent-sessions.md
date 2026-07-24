@@ -120,6 +120,8 @@ Status transitions:
   `handle.kill()`, classifying the exit regardless of its non-zero exit code),
   else `done` (exit 0) or `error` (non-zero).
 - `stop` on a stale `running` record with no live pty → `stopped` directly.
+- confirmed app quit → `stopAll()` kills every live pty, revokes its MCP token,
+  and persists each session as `stopped`.
 - `reconcileStaleSessions()` at boot: any `running` record without a live pty
   becomes `stopped` (ptys die with the app, but the agent did not fail).
   Legacy `interrupted` records are still understood and rendered as stopped.

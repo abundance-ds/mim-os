@@ -278,6 +278,16 @@ guard can cancel `before-quit`, and stopping services there would leave a still
 running Mim process with its timers, watchers, telemetry, or search database
 already shut down.
 
+`will-quit` must actively close the desktop HTTP/WebSocket server, Slack Socket
+Mode connection, live agent PTYs, and app jobs. Electron closing its windows
+does not reliably release those Node and child-process handles by itself.
+
+The MCP discovery file is process-owned. Publish it as soon as the desktop
+server is listening, before slower background services start. Quit may remove
+the file only when its port and token still match the record that process
+wrote; otherwise an older, slow-shutting-down process can break MCP for a newer
+running Mim instance.
+
 ## DOCX worker resources use electron-builder OS names
 
 The .NET DOCX worker build writes `resources/docx-worker/<os>-<arch>/` using electron-builder OS names (`mac`, `win`, `linux`), not Node's `process.platform` names (`darwin`, `win32`, `linux`). The runtime resolver still checks legacy local layouts, but packaged builds and CI verification use the electron-builder names. Keep `electron-builder.config.mjs`, `scripts/build-docx-worker.mjs`, `scripts/verify-docx-worker-resource.mjs`, and `src/main/docx/worker.ts` in sync.

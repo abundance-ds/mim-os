@@ -38,6 +38,7 @@ export interface PackageRunRecord {
 export interface PackageJobRunner {
   start(packageId: string, jobId: string, inputs?: Record<string, unknown>): Promise<{ runId: string; status: PackageRunStatus; ephemeral?: true }>
   cancel(runId: string): Promise<PackageRunRecord>
+  cancelAll(): void
   get(runId: string): PackageRunRecord | null
   list(packageId?: string, options?: { includeArchived?: boolean; archived?: boolean }): PackageRunRecord[]
   rename(runId: string, label: string): PackageRunRecord
@@ -159,6 +160,10 @@ export function createPackageJobRunner(options: PackageJobRunnerOptions): Packag
     emit(current.record, 'job.cancelled', {})
     persist(current.record)
     return current.record
+  }
+
+  function cancelAll(): void {
+    for (const runId of [...active.keys()]) void cancel(runId)
   }
 
   function get(runId: string): PackageRunRecord | null {
@@ -315,7 +320,7 @@ export function createPackageJobRunner(options: PackageJobRunnerOptions): Packag
     return active.size
   }
 
-  return { start, cancel, get, list, rename, archive, delete: deleteRun, waitForRun, reconcileStaleRuns, hasActiveRuns, activeRunCount }
+  return { start, cancel, cancelAll, get, list, rename, archive, delete: deleteRun, waitForRun, reconcileStaleRuns, hasActiveRuns, activeRunCount }
 }
 
 function summarize(value: unknown): unknown {

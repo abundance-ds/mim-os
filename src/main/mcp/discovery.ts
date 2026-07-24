@@ -42,8 +42,24 @@ export function readMcpDiscoveryFile(home = defaultHome()): McpDiscovery {
   return discovery
 }
 
-export function deleteMcpDiscoveryFile(home = defaultHome()): void {
-  try { unlinkSync(mcpDiscoveryPath(home)) } catch { /* best effort */ }
+export function deleteMcpDiscoveryFile(home = defaultHome(), owner?: McpDiscovery): boolean {
+  const path = mcpDiscoveryPath(home)
+  if (owner) {
+    try {
+      const current = JSON.parse(readFileSync(path, 'utf-8')) as Partial<McpDiscovery>
+      if (current.port !== owner.port || current.token !== owner.token) return false
+    } catch {
+      // A missing, malformed, or replaced record does not belong to this
+      // desktop process and must not be removed.
+      return false
+    }
+  }
+  try {
+    unlinkSync(path)
+    return true
+  } catch {
+    return false
+  }
 }
 
 function assertDiscovery(value: Partial<McpDiscovery>): asserts value is McpDiscovery {

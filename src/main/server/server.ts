@@ -557,7 +557,11 @@ export async function createServer(
   return {
     port,
     shellToken,
-    close: () => server.close(),
+    close: () => {
+      for (const client of wss.clients) client.terminate()
+      wss.close()
+      server.close()
+    },
     broadcast: (event: string, data?: unknown) => {
       // Buffer package job events for replay on reconnect.
       if (event === 'package:job:event' && data && typeof data === 'object') {
