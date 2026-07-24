@@ -15,7 +15,6 @@ Apps maintained in the Mim app catalog.
 | GitHub Monitor | Org-wide GitHub issues, PRs, project boards, and activity with saved views and AI summaries. | 0.3.6 |
 | Import to Markdown | Convert Word, Excel, BibTeX, and selectable PDF files into AI-ready Markdown. | 0.1.3 |
 | Knowledge | Knowledge base | 0.3.0 |
-| Mail | AI-native Gmail: collaborative drafting with proposal review, legible voices, a hard human send gate, and a provenance flywheel. | 0.1.3 |
 | References | Reference library: capture by DOI, PDF, or paste; cite from a real, verifiable library. | 0.1.0 |
 | Scholar | Reproducible abstract-level literature search with source-grounded candidate sets. | 0.1.0 |
 | Slides | Generates slide decks as paginated HTML and exports a print-exact PDF. | 0.2.1 |
@@ -84,28 +83,6 @@ Knowledge base
 - `knowledge.delete`
 
 Workspace knowledge base for capturing and retrieving persistent notes, decisions, people, organizations, projects, and records.
-
-## mail
-
-AI-native Gmail: collaborative drafting with proposal review, legible voices, a hard human send gate, and a provenance flywheel.
-
-**views:**
-- Mail (work)
-
-**named tools:**
-- `mail.search`
-- `mail.thread`
-- `mail.message`
-- `mail.labels`
-- `mail.label`
-- `mail.sync`
-- `mail.drafts`
-- `mail.draft.get`
-- `mail.draft.create`
-- `mail.draft.propose`
-- `mail.voices`
-
-AI-native Gmail. Your mailbox becomes a local, fully searchable mirror that you and the AI work together — with one hard rule: **the AI proposes, you decide.**
 
 ## references
 

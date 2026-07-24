@@ -78,7 +78,7 @@ Each entry is a one-liner with the source cluster and relevant docs. Read the li
 - **Settings tools.** Route Personal preferences to `~/.mim/config.yaml` and current-Project runtime/tool state to `.mim/settings.json`; agent tool availability policy remains Project-local for Settings > Tools. `src/main/tools/settings.ts`, `src/main/tools/toolPolicy.ts`.
 - **Bridge tools.** Cross-surface messaging: `editor.open`, `terminal.run`, `chat.send`. `src/main/tools/bridge.ts`.
 - **Editor state tool.** `editor.state` (MCP: `editor_state`): open tabs + active document snapshot, pushed by the renderer and cached in main. `src/main/tools/editorState.ts`.
-- **Headless CLI.** `mim` command over the shared tool registry; no Electron. `mim always-on` adds background Team/Project sync, schedule/file/webhook/Slack automation, heartbeat status, and graceful shutdown for an operator-managed machine. `src/main/cli.ts`, `headless.ts`. Docs: [cli.md](cli.md).
+- **Headless CLI.** `mim` command over the shared tool registry; no Electron. `mim tui <app>` hosts an enabled app-owned terminal interface, with `mim k` as the Knowledge shortcut; `mim always-on` adds background Team/Project sync, schedule/file/webhook/Slack automation, heartbeat status, and graceful shutdown for an operator-managed machine. `src/main/cli.ts`, `headless.ts`, `tui/packageTui.ts`. Docs: [cli.md](cli.md).
 - **MCP bridge.** Local stdio bridge from external CLI agents to the running desktop, with atomic process-owned discovery and ownership-safe restart cleanup. `src/main/mcp/`, `src/main/server/server.ts`. Docs: [mcp.md](mcp.md).
 - **Preload bridge.** `window.kernel` IPC gateway. `src/preload/index.ts`.
 
@@ -95,7 +95,7 @@ Each entry is a one-liner with the source cluster and relevant docs. Read the li
 - **Toolchain detection.** Catalog of R/Rscript/Quarto/pandoc/python3 with login-shell binary resolution, version capture, and promise cache. `src/main/toolchain/toolchain.ts`. Docs: [code-execution.md](code-execution.md).
 - **Code execution.** `shell.run` (AI key: `bash`) unified shell tool and `code.run` allowlisted interpreter tool: spawn, output tail caps, product scan, run records, plot-capture harness. `src/main/tools/code.ts`, `resources/r/mim-run.R`. Docs: [code-execution.md](code-execution.md).
 - **Terminal (PTY).** node-pty spawning, shell integration, keybinding profiles, program tabs (toolchain-validated). `src/main/pty.ts`, `ptyCommand.ts`, `ptyShellIntegration.ts`.
-- **Agent sessions.** CLI coding agents (Claude Code, Codex, Gemini CLI, Pi 0.76+) as first-class runs with compatibility detection, deterministic resume, idle-before-first-prompt status tracking, explicit blocking-input signals (including Codex Action Required titles), and stop/archive lifecycle. Pi sessions automatically load an unpacked first-party extension that exposes the curated Mim tool catalog and lifecycle title signals over the per-session authenticated desktop socket. `src/main/agents/`, `resources/pi/`. Docs: [agent-sessions.md](agent-sessions.md).
+- **Agent sessions.** CLI coding agents (Claude Code, Codex, Gemini CLI, Pi 0.76+) as first-class runs with compatibility detection, deterministic resume, placeholder-safe prompt auto-titles, idle-before-first-prompt status tracking, explicit blocking-input signals (including Codex Action Required titles), and stop/archive lifecycle. Pi sessions automatically load an unpacked first-party extension that exposes the curated Mim tool catalog and lifecycle title signals over the per-session authenticated desktop socket. `src/main/agents/`, `resources/pi/`. Docs: [agent-sessions.md](agent-sessions.md).
 
 ### Main Process — Web & Content
 
@@ -115,9 +115,10 @@ Each entry is a one-liner with the source cluster and relevant docs. Read the li
 - **App discovery and activation.** Direct Mim, Team, and Project roots with Project > Team > Mim precedence, local per-Project activation, permission review, and live rescans. `src/main/packages/packages.ts`, `packageEnablement.ts`, `tools/coreApps.ts`, `tools/packages.ts`. Docs: [app-system-api.md](app-system-api.md), [custom-apps.md](custom-apps.md).
 - **Core-app tools.** `app.status/enable/disable/trust` for local activation and permission review. `src/main/tools/coreApps.ts`.
 - **App authoring.** Starter templates, create/validate/reload authoring loop. `src/main/tools/packages.ts`, `templates/appTemplates.ts`.
+- **App TUI host.** Loads an enabled app's manifest-declared `tui/` entry in the interactive headless CLI, supplies the shared terminal toolkit, and attributes calls to the app identity so the ordinary manifest gate remains in force. `src/main/tui/packageTui.ts`.
 - **App server.** Express + WebSocket for desktop app/AI/MCP routes, SDK file serving, and app/MCP tool dispatch. `src/main/server/server.ts`.
 - **App SDK.** WebSocket client for iframes. `sdk/mim.js`, `sdk/tokens.css`.
-- **Skills and instructions.** One authored catalog with Project > Personal > Team > Mim precedence, per-user toggles, You/Project/Team creation, managed normal-editor paths, app-bundled skills, progressive tool gating, and Mim → Team → Personal → Project instruction composition. Personal and Project instruction links live with their owning Settings sections. `src/main/skills.ts`, `ai/instructions.ts`, `ai/systemPrompt.ts`, `tools/skills.ts`. UI: `SkillsSettingsPanel.vue`, `GeneralSettingsPanel.vue`, `ProjectSettingsPanel.vue`, Chat skill chips. Docs: [skills.md](skills.md), [custom-apps.md](custom-apps.md).
+- **Skills and instructions.** One authored catalog with Project > Personal > Team > Mim precedence, per-user toggles, You/Project/Team creation, managed normal-editor paths, app-bundled skills, progressive tool gating, revision-safe Personal skill creation/update, and Mim → Team → Personal → Project instruction composition. Personal and Project instruction links live with their owning Settings sections. `src/main/skills.ts`, `ai/instructions.ts`, `ai/systemPrompt.ts`, `tools/skills.ts`. UI: `SkillsSettingsPanel.vue`, `GeneralSettingsPanel.vue`, `ProjectSettingsPanel.vue`, Chat skill chips. Docs: [skills.md](skills.md), [custom-apps.md](custom-apps.md).
 
 ### Main Process — Integrations
 
@@ -170,8 +171,9 @@ Each entry is a one-liner with the source cluster and relevant docs. Read the li
 
 The reference catalog lives in
 [shoulders-ai/mim-apps](https://github.com/shoulders-ai/mim-apps), one app per
-`packages/<id>/`. The compatibility suite stages these as Mim-origin apps and
-exercises the current loader/runtime contract.
+`packages/<id>/`. `index.json` is the publication boundary. The compatibility
+suite stages every published app as a Mim-origin app and exercises the current
+loader/runtime contract.
 
 - **Board** — issues model, `issues.*` named tools.
 - **Knowledge** — knowledge model, `knowledge.*` named tools.
@@ -183,8 +185,9 @@ exercises the current loader/runtime contract.
 
 ### Documentation Pipeline
 
-- **Docs generators.** Deterministic scripts that generate developer documentation pages from source data. `scripts/docs-gen/`. Run via `npm run docs:gen` (requires `npm run build` for the tool catalog).
+- **Docs generators.** Deterministic scripts that generate developer documentation pages from source data. App generation uses `mim-apps/index.json` as its publication boundary, so ignored or local-only app directories cannot enter public docs. `scripts/docs-gen/`. Run via `npm run docs:gen` (requires `npm run build` for the tool catalog).
 - **Claim lint.** Validates manual page claims (tool names, shortcuts, settings refs, internal links) against source of truth. `scripts/docs-lint.mjs`. Run via `npm run docs:lint`.
+- **Continuous verification.** Pushes and pull requests run the full suite, the real `mim-apps` compatibility harness, production build, generated-doc drift check, and claim lint. `.github/workflows/test.yml`.
 
 ### Docs Index
 
@@ -234,7 +237,6 @@ reflected in the current-state docs; git history retains them.
 - [proposals/tools-settings-tab.md](proposals/tools-settings-tab.md) — Settings > Tools plan for unified AI/MCP tool availability policy.
 - [proposals/routines.md](proposals/routines.md) — Routines: workspace-owned standing prompts that create runs; desktop starts stream through the normal chat transcript, headless scheduler runner, visible tools plus approval grants, scheduler ownership.
 - [proposals/slack-transport.md](proposals/slack-transport.md) — proposed clean break: Slack as a first-class transport to the workspace's default Mim agent, with one standing-consent decision per enabled channel, durable threaded conversations, full normal tool/subagent utility, and no Slack-specific permission system.
-- [proposals/trust-model-v1.md](proposals/trust-model-v1.md) — one Google connection shared by core and apps: written trust-model ruling, `ctx.google` runtime capability, `gmail.modify` capability, gate prefix-block removal, Mail app OAuth deletion, deferred broker/sandbox work with a revisit trigger.
 
 ## File Tree
 
@@ -245,6 +247,7 @@ src/
     autoUpdater.ts              # electron-updater
     cli.ts                      # Headless CLI commands
     headless.ts                 # Non-Electron tool registry boot
+    tui/packageTui.ts           # App-owned terminal interface host
     sessions.ts                 # Session CRUD (JSON files)
     sessionManifest.ts          # Lightweight sessions cache
     userConfig.ts               # ~/.mim/config.yaml loader
@@ -488,13 +491,16 @@ resources/
   r/mim-run.R                   # Plot-capture harness for code.run
   icon.png                      # macOS dev dock icon
 
+skills/
+  build-app/SKILL.md            # Smallest-abstraction app/skill authoring workflow
+
 scripts/
   docs-gen/                     # Manual documentation generators
     index.mjs                   # Orchestrator — runs all generators
     toolCatalog.mjs             # Tool catalog from headless registry + gate.ts
     shortcuts.mjs               # Shortcuts from ShortcutsDialog.vue
     models.mjs                  # Models from resources/ai-models.json
-    apps.mjs                    # Apps from mim-apps manifests
+    apps.mjs                    # Catalogued apps from mim-apps index + manifests
   docs-lint.mjs                 # Claim lint for manual pages
 
 manual/
