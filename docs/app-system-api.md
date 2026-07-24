@@ -18,6 +18,7 @@ separate decisions:
 | Runtime, jobs, data, HTTP, secrets | `src/main/packages/packageRuntime.ts`, `packageJobs.ts`, `packageData.ts`, `packageHttp.ts`, `packageSecrets.ts` |
 | Named tools and agent profiles | `src/main/packages/namedPackageTools.ts`, `src/main/ai/agentMounts.ts` |
 | App management tools | `src/main/tools/packages.ts`, `src/main/tools/coreApps.ts`, `src/main/tools/packageRuntime.ts` |
+| Terminal UI host | `src/main/tui/packageTui.ts` |
 | Renderer SDK | `sdk/mim.js`, `sdk/mim.d.ts`, `sdk/tokens.css` |
 
 ## Discovery and precedence
@@ -56,6 +57,9 @@ The app contract lives under the `mim` key in `package.json`:
         "role": "work"
       }
     ],
+    "tui": {
+      "entry": "./tui/index.mjs"
+    },
     "backend": "./backend/index.mjs",
     "permissions": {
       "workspace": { "read": true, "write": false },
@@ -75,7 +79,11 @@ The app contract lives under the `mim` key in `package.json`:
 ```
 
 App ids use lowercase letters, digits, `_`, and `-`. Views may use `work`,
-`artifact`, or `either`. UI and backend paths must stay within the package.
+`artifact`, or `either`. UI, terminal UI, and backend paths must stay within
+the package. A `tui.entry` must live under the app's `tui/` directory, exist at
+validation time, and export `run(context)`. The interactive CLI launches it
+with `mim tui <app>` and supplies the terminal toolkit plus an app-attributed
+tool caller. Knowledge also has the shortcut `mim k`.
 `dataFolder`, when present, is a single safe Project-relative folder created
 on enablement and never deleted by disabling the app.
 
@@ -94,8 +102,8 @@ All origins default to disabled. `app.enable` and `app.disable` write only:
 at `<project>/.mim/packages/enabled.json`. The file is private runtime state.
 It is not a Project or Team declaration.
 
-Project and Team apps with a backend or effective workspace, AI, HTTP, or
-secret permissions need one local permission acknowledgement. `app.trust`
+Project and Team apps with a backend, terminal UI, or effective workspace, AI,
+HTTP, or secret permissions need one local permission acknowledgement. `app.trust`
 records it. Mim apps do not require this prompt.
 
 ## Management tools

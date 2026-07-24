@@ -60,6 +60,39 @@ describe('package manifest v1', () => {
     expect(result.manifest?.backend).toBe('./backend/index.mjs')
   }))
 
+  it('accepts one package-owned terminal interface inside tui/', () => withPackage((dir) => {
+    mkdirSync(join(dir, 'tui'), { recursive: true })
+    writeFileSync(join(dir, 'tui', 'index.mjs'), 'export async function run() {}')
+    const pkg = baseManifest()
+    ;(pkg.mim as Record<string, unknown>).tui = { entry: './tui/index.mjs' }
+
+    const result = parsePackageManifest(pkg, dir)
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.manifest?.tui).toEqual({ entry: './tui/index.mjs' })
+  }))
+
+  it('rejects terminal interface entries outside tui/', () => withPackage((dir) => {
+    writeFileSync(join(dir, 'outside.mjs'), 'export async function run() {}')
+    const pkg = baseManifest()
+    ;(pkg.mim as Record<string, unknown>).tui = { entry: './outside.mjs' }
+
+    const result = parsePackageManifest(pkg, dir)
+
+    expect(result.manifest).toBeNull()
+    expect(result.diagnostics.some(d => d.message.includes('inside tui/'))).toBe(true)
+  }))
+
+  it('rejects missing terminal interface entry files', () => withPackage((dir) => {
+    const pkg = baseManifest()
+    ;(pkg.mim as Record<string, unknown>).tui = { entry: './tui/missing.mjs' }
+
+    const result = parsePackageManifest(pkg, dir)
+
+    expect(result.manifest).toBeNull()
+    expect(result.diagnostics.some(d => d.message.includes('TUI entry file does not exist'))).toBe(true)
+  }))
+
   it('rejects missing manifestVersion', () => withPackage((dir) => {
     const pkg = baseManifest()
     delete (pkg.mim as Partial<typeof pkg.mim>).manifestVersion

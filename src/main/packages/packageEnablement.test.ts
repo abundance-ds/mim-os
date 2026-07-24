@@ -68,4 +68,15 @@ describe('per-person, per-Project app activation', () => {
     store.setEnabled('team-code', true)
     expect(store.isEnabled(teamApp)).toBe(true)
   })
+
+  it('reviews package-owned terminal code before enabling it', () => {
+    const store = createPackageEnablementStore({ getWorkspacePath: () => project })
+    const tuiApp = app('team-tui', 'team')
+    tuiApp.manifest.tui = { entry: './tui/index.mjs' }
+
+    expect(store.needsTrust(tuiApp)).toBe(true)
+    store.ackTrust(tuiApp)
+    store.setEnabled('team-tui', true)
+    expect(store.isEnabled(tuiApp)).toBe(true)
+  })
 })

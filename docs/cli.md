@@ -40,6 +40,8 @@ mim list-tools [--json]
 mim tool <name> [json|--stdin] [--workspace path] [--json] [--yes]
 mim go [--workspace path] [-- command ...]
 mim always-on [--workspace path] [--host address] [--port number]
+mim tui <app> [--workspace path]
+mim k [--workspace path]
 mim mcp
 ```
 
@@ -59,6 +61,12 @@ For secret-bearing calls, prefer `--stdin` from a trusted local shell so tokens 
 Approval-required `mim tool` calls are denied by default in non-interactive mode. On an interactive TTY the CLI prompts on stderr. `--yes` is the explicit escape hatch for trusted local automation and auto-approves the headless gate.
 
 `mim go` refreshes agent context, then runs an external command in the workspace. With no command it runs `claude`.
+
+`mim tui <app>` launches an enabled app's production terminal interface in the
+resolved Project. It requires an interactive terminal and preserves the same
+app identity, declared permissions, data, and named tools as the desktop view.
+`mim k` is the short form for `mim tui knowledge`; the desktop Knowledge view
+continues to live alongside it.
 
 `mim always-on` keeps the same headless kernel alive for one Project. Each
 one-minute heartbeat:
@@ -140,6 +148,7 @@ install lifecycle.
 ## Source
 
 - CLI entrypoint: `src/main/cli.ts`
+- App TUI host: `src/main/tui/packageTui.ts`
 - Headless registry: `src/main/headless.ts`
 - Always-on lifecycle: `HeadlessKernel.startAlwaysOn()` in `src/main/headless.ts`
 - MCP stdio bridge: `src/main/mcp/stdio.ts`

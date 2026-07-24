@@ -69,7 +69,7 @@ The session-scoped "always allow" checkbox sets a per-tool allow for the active 
 
 ## App permissions
 
-The `package` actor is checked against the manifest `permissions` block. If the app has not declared the required permission, the call is denied without prompting. Team and Project apps with a backend or effective permissions also require a per-machine acknowledgement recorded in `.mim/packages/enabled.json`. `app.trust` is hard-denied to the `ai` actor before any allow path.
+The `package` actor is checked against the manifest `permissions` block. If the app has not declared the required permission, the call is denied without prompting. Team and Project apps with executable backend or terminal UI code, or effective permissions, also require a per-machine acknowledgement recorded in `.mim/packages/enabled.json`. Terminal interfaces call tools as the `package` actor and remain inside the same manifest boundary as iframe app views. `app.trust` is hard-denied to the `ai` actor before any allow path.
 
 Apps cannot call `agent.*` tools, app-management tools, trust tools, account tools, or terminal tools.
 

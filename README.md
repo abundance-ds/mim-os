@@ -54,6 +54,7 @@ Headless CLI after build:
 ```bash
 node bin/mim.mjs help
 node bin/mim.mjs status --workspace .
+node bin/mim.mjs k --workspace .        # Knowledge terminal UI
 node bin/mim.mjs always-on --workspace .
 ```
 

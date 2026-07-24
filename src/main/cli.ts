@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url'
 import { createHeadlessKernel, type HeadlessKernel } from '@main/headless.js'
 import type { PermissionApprovalRequest } from '@main/security/gate.js'
 import { runMcpStdio } from '@main/mcp/stdio.js'
+import { runPackageTui } from '@main/tui/packageTui.js'
 
 export interface CliIO {
   cwd: string
@@ -18,6 +19,7 @@ export interface CliIO {
   confirmApproval?: (request: PermissionApprovalRequest) => Promise<boolean>
   spawn?: typeof spawn
   runMcp?: () => Promise<number>
+  runPackageTui?: (kernel: HeadlessKernel, packageId: string) => Promise<number>
   waitForShutdown?: () => Promise<void>
   platform?: NodeJS.Platform
 }
@@ -42,6 +44,8 @@ Usage:
   mim list-tools [--json]
   mim go [--workspace path] [-- command ...]
   mim always-on [--workspace path] [--host address] [--port number]
+  mim tui <app> [--workspace path]
+  mim k [--workspace path]              # Knowledge TUI
   mim mcp
 `
 
@@ -79,6 +83,21 @@ export async function runCli(argv: string[], io: CliIO = defaultIO()): Promise<n
       else io.stdout(`Always-on client running for ${kernel.tools.getWorkspacePath()} at http://${status.host}:${status.port}\n`)
       await (io.waitForShutdown?.() ?? waitForShutdownSignal())
       return 0
+    }
+
+    if (parsed.command === 'tui' || parsed.command === 'k') {
+      if (io.isTTY === false) throw new Error('Package terminal interfaces require an interactive terminal')
+      const packageId = parsed.command === 'k' ? 'knowledge' : parsed.args[0]
+      if (!packageId || (parsed.command === 'tui' && parsed.args.length !== 1)) {
+        throw new Error('Usage: mim tui <app>')
+      }
+      if (parsed.command === 'k' && parsed.args.length > 0) {
+        throw new Error('Usage: mim k [--workspace path]')
+      }
+      kernel = await openKernelForWorkspace(parsed, io)
+      return io.runPackageTui
+        ? io.runPackageTui(kernel, packageId)
+        : runPackageTui(kernel, packageId)
     }
 
     if (parsed.command === 'init') {

@@ -33,6 +33,7 @@ describe('mim CLI', () => {
     platform?: NodeJS.Platform
     spawn?: any
     waitForShutdown?: () => Promise<void>
+    runPackageTui?: (kernel: unknown, packageId: string) => Promise<number>
   } = {}) {
     return {
       cwd,
@@ -45,6 +46,7 @@ describe('mim CLI', () => {
       platform: options.platform,
       spawn: options.spawn,
       waitForShutdown: options.waitForShutdown,
+      runPackageTui: options.runPackageTui,
     }
   }
 
@@ -63,8 +65,55 @@ describe('mim CLI', () => {
 
     const help = stdout.join('')
     expect(help).toContain('mim mcp')
+    expect(help).toContain('mim tui <app>')
+    expect(help).toContain('mim k')
     expect(help).not.toContain('mim serve')
     expect(help).not.toContain('shared-workspace')
+  })
+
+  it('launches a package terminal interface in the resolved workspace', async () => {
+    writeFileSync(join(dir, 'mim.yaml'), 'name: tui-project\n')
+    const launches: string[] = []
+
+    const code = await runCli(['tui', 'knowledge'], io(dir, undefined, {
+      isTTY: true,
+      runPackageTui: async (kernel, packageId) => {
+        launches.push(packageId)
+        expect((kernel as { tools: { getWorkspacePath(): string | null } }).tools.getWorkspacePath()).toBe(dir)
+        return 9
+      },
+    }))
+
+    expect(code).toBe(9)
+    expect(launches).toEqual(['knowledge'])
+  })
+
+  it('provides mim k as the Knowledge TUI shortcut', async () => {
+    writeFileSync(join(dir, 'mim.yaml'), 'name: tui-project\n')
+    const launches: string[] = []
+
+    const code = await runCli(['k'], io(dir, undefined, {
+      isTTY: true,
+      runPackageTui: async (_kernel, packageId) => {
+        launches.push(packageId)
+        return 0
+      },
+    }))
+
+    expect(code).toBe(0)
+    expect(launches).toEqual(['knowledge'])
+  })
+
+  it('requires an interactive terminal for package TUIs', async () => {
+    writeFileSync(join(dir, 'mim.yaml'), 'name: tui-project\n')
+
+    const code = await runCli(['tui', 'knowledge'], io(dir, undefined, {
+      isTTY: false,
+      runPackageTui: async () => 0,
+    }))
+
+    expect(code).toBe(1)
+    expect(stderr.join('')).toContain('interactive terminal')
   })
 
   it('parses the explicit approval flag', () => {

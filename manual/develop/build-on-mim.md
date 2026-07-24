@@ -26,7 +26,7 @@ Mim exposes its tool registry to Claude Code, Codex, and Gemini CLI through a lo
 
 ## Headless CLI
 
-The `mim` binary boots a headless tool registry without Electron. It runs Project commands, generic tool calls, trace queries, app runtime operations, and always-on routines from any shell. `mim go` refreshes agent context and launches an external command (defaulting to `claude`) in the Project. See [command line](cli) for the full command set.
+The `mim` binary boots a headless tool registry without Electron. It runs Project commands, generic tool calls, trace queries, app runtime operations, app-owned terminal interfaces, and always-on routines from any shell. `mim tui <app>` launches an enabled app's TUI (`mim k` opens Knowledge), while `mim go` refreshes agent context and launches an external command (defaulting to `claude`) in the Project. See [command line](cli) for the full command set.
 
 ## Workspace contract
 

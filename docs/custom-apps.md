@@ -5,6 +5,22 @@ shared through the connected Team source. Mim also ships built-in apps. There
 is no app registry, source list, global install cache, or shared activation
 flag.
 
+## Choose a skill before an app
+
+Use the smallest durable abstraction that solves the recurring task:
+
+- Use a skill when existing tools already provide the required capability and
+  Mim only needs reusable instructions, learned preferences, or a repeatable
+  workflow.
+- Use an agent profile when the work needs a separate identity, sessions,
+  model, or narrower tool scope.
+- Use an app only when the capability genuinely needs new executable logic,
+  persistent structured data, background jobs, or a dedicated interface.
+
+For example, learning how a person writes email is a Personal skill over the
+existing Gmail tools. It does not require a mailbox mirror, drafting database,
+or email UI.
+
 ## Origins and precedence
 
 Apps are discovered directly from:
@@ -58,6 +74,8 @@ my-app/
   README.md
   ui/
     index.html
+  tui/
+    index.mjs
   backend/
     index.mjs
   skills/
@@ -65,7 +83,12 @@ my-app/
       SKILL.md
 ```
 
-UI, backend, skills, and README are optional. `package.json` is required.
+Iframe UI, terminal UI, backend, skills, and README are optional.
+`package.json` is required. A terminal UI is declared as
+`"tui": { "entry": "./tui/index.mjs" }`, exports `run(context)`, and launches
+with `mim tui <app>` after the app is enabled. The module receives the shared
+terminal toolkit and an app-attributed `call()` function; it should not bundle
+its own copy of the toolkit or bypass Mim's tool registry.
 Use `package.validate` after edits and `package.reload` to rescan the catalog,
 invalidate runtime caches, and refresh named tools.
 
@@ -76,10 +99,10 @@ deletion, README access, runtime validation, capability inspection, backend
 jobs, named tools, agent profiles, and the SDK remain the same regardless of
 origin.
 
-Apps that contain a backend or request effective permissions require a local
-permission review before first activation when they come from Project or Team.
-Mim-shipped apps are trusted by origin. The acknowledgement is local and does
-not create a source trust system.
+Apps that contain executable backend or terminal UI code, or request effective
+permissions, require a local permission review before first activation when
+they come from Project or Team. Mim-shipped apps are trusted by origin. The
+acknowledgement is local and does not create a source trust system.
 
 ## Updates
 

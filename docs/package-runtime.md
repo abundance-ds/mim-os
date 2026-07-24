@@ -64,7 +64,7 @@ tool and skill apps are expected.
 
 The manifest is a stable envelope, not the programming model. It answers only
 questions the shell must know before executing app code: identity, view pane
-roles, backend entry, compatibility, and declared permissions.
+roles, terminal and backend entries, compatibility, and declared permissions.
 
 Use `package.json` with a `mim` block:
 
@@ -80,6 +80,7 @@ Use `package.json` with a `mim` block:
     "description": "Statistical review tools for chat and data workflows.",
     "icon": "SC",
     "views": [],
+    "tui": { "entry": "./tui/index.mjs" },
     "backend": "./backend/index.mjs",
     "permissions": {
       "workspace": { "read": true, "write": false },
@@ -100,6 +101,9 @@ Rules:
 - Work views appear in Navigator and open in the Work pane.
 - Artifact views are opened only by explicit Work-surface actions.
 - `views` is optional and may be empty.
+- `tui` is optional. Its entry must be an existing module under `tui/` that
+  exports `run(context)`; `mim tui <app>` loads it only for an enabled app in an
+  interactive terminal.
 - `backend` is optional. A UI-only app does not need backend code.
 - Permissions are declarative because the shell must know them before loading
   backend code.

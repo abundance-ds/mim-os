@@ -28,6 +28,11 @@ App-mounted agents (`export const agents` in a backend) execute as actor `ai`
 through the same gate. Agents are backend exports, so the local app permission acknowledgement
 already applies — no separate exemption.
 
+Team and Project apps with executable backend or terminal UI code, or effective
+workspace, AI, HTTP, or secret permissions, require that local acknowledgement
+before activation. A terminal interface calls tools as the `package` actor, so
+it remains inside the same manifest boundary as an iframe app view.
+
 Consequence: the gate defends against the agent's autonomous actions and app
 automation. The renderer cannot escalate because IPC is hardcoded to `user`.
 

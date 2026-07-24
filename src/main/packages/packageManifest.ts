@@ -21,6 +21,10 @@ export interface PackageView {
   role: PackageViewRole
 }
 
+export interface PackageTui {
+  entry: string
+}
+
 export interface PackagePermissions {
   workspace?: {
     read?: boolean
@@ -39,6 +43,7 @@ export interface MimPackageManifest {
   description?: string
   icon?: string
   views: PackageView[]
+  tui?: PackageTui
   backend?: string
   permissions: PackagePermissions
   provides?: { tools: PackageToolGrant[] }
@@ -61,6 +66,7 @@ const MIM_KEYS = new Set([
   'description',
   'icon',
   'views',
+  'tui',
   'backend',
   'permissions',
   'provides',
@@ -106,6 +112,7 @@ export function parsePackageManifest(
   }
 
   const views = parseViews(input.views, packageDir, errors)
+  const tui = parseTui(input.tui, packageDir, errors)
   const backend = parsePackagePath(input.backend, packageDir, 'backend', errors, { mustExist: true })
   const permissions = parsePermissions(input.permissions, packageDir, errors)
 
@@ -128,6 +135,7 @@ export function parsePackageManifest(
       description: readString(input.description),
       icon: readString(input.icon),
       views,
+      tui,
       backend,
       permissions,
       provides,
@@ -216,6 +224,35 @@ function parseViews(value: unknown, packageDir: string, diagnostics: PackageDiag
 
 function isPackageViewRole(value: string | undefined): value is PackageViewRole {
   return value === 'work' || value === 'artifact' || value === 'either'
+}
+
+function parseTui(
+  value: unknown,
+  packageDir: string,
+  diagnostics: PackageDiagnostic[],
+): PackageTui | undefined {
+  if (value == null) return undefined
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    diagnostics.push({ path: packageDir, message: 'mim.tui must be an object' })
+    return undefined
+  }
+
+  const entry = readString((value as Record<string, unknown>).entry)
+  const resolved = entry ? resolveInsidePackage(packageDir, entry) : null
+  if (!entry || !resolved) {
+    diagnostics.push({ path: packageDir, message: 'mim.tui.entry must stay inside the package directory' })
+    return undefined
+  }
+  const rel = relativePackagePath(packageDir, resolved)
+  if (!rel.startsWith('tui/')) {
+    diagnostics.push({ path: packageDir, message: 'mim.tui.entry must point inside tui/' })
+    return undefined
+  }
+  if (!existsSync(resolved)) {
+    diagnostics.push({ path: packageDir, message: `TUI entry file does not exist: ${entry}` })
+    return undefined
+  }
+  return { entry }
 }
 
 function parsePackagePath(

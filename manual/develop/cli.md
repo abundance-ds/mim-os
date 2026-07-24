@@ -43,6 +43,8 @@ mim list-tools [--json]
 mim tool <name> [json|--stdin] [--workspace path] [--json] [--yes]
 mim go [--workspace path] [-- command ...]
 mim always-on [--workspace path] [--host address] [--port number]
+mim tui <app> [--workspace path]
+mim k [--workspace path]
 mim mcp
 ```
 
@@ -66,6 +68,10 @@ printf '{}' | mim tool workspace.info --stdin --json
 Tool calls run as the `ai` actor. Approval-required calls are denied by default in non-interactive mode. On an interactive TTY, the CLI prompts on stderr. `--yes` auto-approves the headless gate for trusted local automation.
 
 `mim go` refreshes agent context, then runs an external command in the workspace. With no command after `--`, it runs `claude`.
+
+`mim tui <app>` launches an enabled app-owned terminal interface in the
+resolved workspace. It requires an interactive terminal and uses the app's
+normal identity, permissions, data, and tools. `mim k` launches Knowledge.
 
 `mim always-on` keeps the headless kernel alive to synchronize Project and
 Team changes, run scheduled/file/webhook/Slack routines, and expose signed

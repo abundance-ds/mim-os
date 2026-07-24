@@ -10,11 +10,19 @@ verified: bf1358ebd68b1348a9fd85c6576c5b71e5f11880
 
 # app system and API
 
-An app is a file-native capability bundle. It can contribute views (iframe UI), backend jobs, AI tools, skills, and scoped data storage. UI is optional; headless apps are first-class.
+An app is a file-native capability bundle. It can contribute views (iframe UI), a terminal UI, backend jobs, AI tools, skills, and scoped data storage. UI is optional; headless apps are first-class.
 
 ## Manifest
 
-Apps use a standard `package.json` with a `mim` block. Required fields: `manifestVersion` (must be `1`), `id` (lowercase, hyphens, underscores, max 60 chars), and `name`. Optional fields include `description`, `icon` (text token or image asset path under `ui/`), `views` (array with `id`, `label`, `src`, and `role` of `work`, `artifact`, or `either`), `backend` (relative path to ESM module), `permissions`, `provides.tools` (named-tool grants), `dataFolder` (workspace-relative folder name), and `engines.mim` (current value: `runtime-v1`). Unknown keys inside `mim` are reported as warnings unless prefixed with `x-`. A root `README.md` is auto-discovered and surfaced as documentation.
+Apps use a standard `package.json` with a `mim` block. Required fields: `manifestVersion` (must be `1`), `id` (lowercase, hyphens, underscores, max 60 chars), and `name`. Optional fields include `description`, `icon` (text token or image asset path under `ui/`), `views` (array with `id`, `label`, `src`, and `role` of `work`, `artifact`, or `either`), `tui` (`entry` pointing to an ESM module under `tui/`), `backend` (relative path to ESM module), `permissions`, `provides.tools` (named-tool grants), `dataFolder` (workspace-relative folder name), and `engines.mim` (current value: `runtime-v1`). Unknown keys inside `mim` are reported as warnings unless prefixed with `x-`. A root `README.md` is auto-discovered and surfaced as documentation.
+
+## Terminal UI
+
+A terminal module exports `run(context)`. The context supplies the shared
+terminal toolkit, the active terminal, app metadata, and an app-attributed
+`call(name, params)` function. Launch an enabled app with `mim tui <app>`;
+`mim k` is the Knowledge shortcut. Terminal and iframe interfaces can coexist
+over the same backend, tools, and Project data.
 
 ## Permissions
 

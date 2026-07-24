@@ -80,6 +80,7 @@ export function createPackageEnablementStore(options: {
   function requiresTrust(pkg: EnablementPackage): boolean {
     return pkg.source !== 'mim' && (
       pkg.manifest.backend !== undefined
+      || pkg.manifest.tui !== undefined
       || pkg.manifest.permissions.workspace?.read === true
       || pkg.manifest.permissions.workspace?.write === true
       || pkg.manifest.permissions.ai === true
