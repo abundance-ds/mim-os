@@ -818,6 +818,7 @@ function handleCloseTab() {
     closeActiveArtifactTab: () => { artifactHostRef.value?.closeActiveTab?.() },
     closeTerminalTab: () => { workHostRef.value?.closeTerminalTab?.() },
     artifactVisible: () => rightVisible.value,
+    hasActiveArtifactTab: () => artifactHostRef.value?.hasActiveEditorTab?.() ?? false,
     activeArtifactHostId: () => activeArtifactHostId.value,
     activeSession: () => sessionStore.activeSession,
     archiveSession: sessionId => { sessionStore.archive(sessionId) },

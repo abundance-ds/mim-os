@@ -11,6 +11,7 @@ function makeDeps(overrides: Partial<CloseTabActionsDeps> = {}) {
     closeActiveArtifactTab: vi.fn(),
     closeTerminalTab: vi.fn(),
     artifactVisible: vi.fn(() => false),
+    hasActiveArtifactTab: vi.fn(() => true),
     activeArtifactHostId: vi.fn(() => ''),
     activeSession: vi.fn(() => ({ id: 's1', archived: false })),
     archiveSession: vi.fn(),
@@ -27,6 +28,7 @@ describe('app shell close-tab actions', () => {
   it('closes the focused editor tab first', () => {
     const deps = makeDeps({
       editorPaneFocused: vi.fn(() => true),
+      artifactVisible: vi.fn(() => true),
       activeWorkHost: vi.fn(() => 'terminal'),
     })
 
@@ -42,6 +44,7 @@ describe('app shell close-tab actions', () => {
     // CodeMirror; Cmd+W must still close the document tab, not the session.
     const deps = makeDeps({
       editorPaneFocused: vi.fn(() => true),
+      artifactVisible: vi.fn(() => true),
       activeWorkHost: vi.fn(() => 'chat'),
     })
 
@@ -49,6 +52,39 @@ describe('app shell close-tab actions', () => {
 
     expect(deps.closeActiveArtifactTab).toHaveBeenCalledOnce()
     expect(deps.archiveSession).not.toHaveBeenCalled()
+  })
+
+  it('routes to the Work surface when editor focus has no tab to close', () => {
+    // Stale focus in an empty Artifact pane must not swallow Cmd+W: the
+    // visible Work surface (here an agent session) is what the user closes.
+    const deps = makeDeps({
+      editorPaneFocused: vi.fn(() => true),
+      artifactVisible: vi.fn(() => true),
+      hasActiveArtifactTab: vi.fn(() => false),
+      activeWorkHost: vi.fn(() => 'agent-session'),
+      activeAgentSessionId: vi.fn(() => 'agent-1'),
+    })
+
+    handleCloseTab(deps)
+
+    expect(deps.closeActiveArtifactTab).not.toHaveBeenCalled()
+    expect(deps.archiveAgentSession).toHaveBeenCalledWith('agent-1')
+  })
+
+  it('routes to the Work surface when editor focus lingers in a hidden Artifact pane', () => {
+    // A railed Artifact pane can keep DOM focus; Cmd+W still targets what is
+    // on screen, not the invisible editor tab.
+    const deps = makeDeps({
+      editorPaneFocused: vi.fn(() => true),
+      artifactVisible: vi.fn(() => false),
+      activeWorkHost: vi.fn(() => 'agent-session'),
+      activeAgentSessionId: vi.fn(() => 'agent-1'),
+    })
+
+    handleCloseTab(deps)
+
+    expect(deps.closeActiveArtifactTab).not.toHaveBeenCalled()
+    expect(deps.archiveAgentSession).toHaveBeenCalledWith('agent-1')
   })
 
   it('closes the active terminal tab when Terminal Work is active', () => {

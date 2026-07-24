@@ -13,6 +13,8 @@ export interface CloseTabActionsDeps {
   closeActiveArtifactTab(): void
   closeTerminalTab(): void
   artifactVisible(): boolean
+  /** Any document tab (text, PDF, table, file card) active in the editor. */
+  hasActiveArtifactTab(): boolean
   activeArtifactHostId(): string
   activeSession(): CloseTabSession | null
   archiveSession(sessionId: string): void
@@ -23,7 +25,11 @@ export interface CloseTabActionsDeps {
 }
 
 export function handleCloseTab(deps: CloseTabActionsDeps): void {
-  if (deps.editorPaneFocused()) {
+  // Editor focus only claims Cmd+W while there is a visible tab to close.
+  // DOM focus can linger in an empty or railed Artifact pane (e.g. after the
+  // last document tab closed); routing Cmd+W there would silently do nothing
+  // while the user is looking at a Work surface they expect to close.
+  if (deps.editorPaneFocused() && deps.artifactVisible() && deps.hasActiveArtifactTab()) {
     deps.closeActiveArtifactTab()
     return
   }

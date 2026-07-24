@@ -66,10 +66,12 @@ export function createRunActions(deps: RunActionsDeps) {
       const run = (result as { run?: PackageRunRecord }).run
       if (run) deps.upsertPackageRun(run)
       else deps.removePackageRun(runId)
-      await deps.removeWorkHistoryEntry(entryId)
+      // Navigate away first: pruning the active entry would leave Work
+      // history empty for one render and flash the Files fallback surface.
       if (wasActiveWork) {
         await deps.openNextActivity(entryId)
       }
+      await deps.removeWorkHistoryEntry(entryId)
       deps.incrementArchiveRefresh()
       void deps.refreshPackageRuns()
     } catch (err) {
@@ -83,10 +85,10 @@ export function createRunActions(deps: RunActionsDeps) {
       const wasActiveWork = deps.activeWork()?.kind === 'package-run' && deps.activeWork()?.runId === runId
       await deps.callKernel('package.jobs.delete', { runId })
       deps.removePackageRun(runId)
-      await deps.removeWorkHistoryEntry(entryId)
       if (wasActiveWork) {
         await deps.openNextActivity(entryId)
       }
+      await deps.removeWorkHistoryEntry(entryId)
       deps.incrementArchiveRefresh()
       void deps.refreshPackageRuns()
     } catch (err) {
@@ -137,10 +139,10 @@ export function createRunActions(deps: RunActionsDeps) {
       const result = await deps.callKernel('agent.sessions.archive', { sessionId }) as { session?: AgentSessionRuntime }
       if (result.session) deps.applyAgentSessionEvent({ type: 'session.changed', session: result.session })
       else deps.removeAgentSession(sessionId)
-      await deps.removeWorkHistoryEntry(entryId)
       if (wasActiveWork) {
         await deps.openNextActivity(entryId)
       }
+      await deps.removeWorkHistoryEntry(entryId)
       deps.incrementArchiveRefresh()
     } catch (err) {
       deps.setWorkNavigationError(err)
@@ -154,10 +156,10 @@ export function createRunActions(deps: RunActionsDeps) {
       const wasActiveWork = deps.activeWork()?.kind === 'agent-session' && deps.activeWork()?.sessionId === sessionId
       await deps.callKernel('agent.sessions.delete', { sessionId })
       deps.removeAgentSession(sessionId)
-      await deps.removeWorkHistoryEntry(entryId)
       if (wasActiveWork) {
         await deps.openNextActivity(entryId)
       }
+      await deps.removeWorkHistoryEntry(entryId)
       deps.incrementArchiveRefresh()
     } catch (err) {
       deps.setWorkNavigationError(err)
@@ -169,8 +171,8 @@ export function createRunActions(deps: RunActionsDeps) {
       const entryId = chatWorkEntry(sessionId).id
       const wasActiveWork = deps.activeWork()?.kind === 'chat' && deps.activeWork()?.sessionId === sessionId
       await deps.archiveChatSession(sessionId)
-      await deps.removeWorkHistoryEntry(entryId)
       if (wasActiveWork) await deps.openNextActivity(entryId)
+      await deps.removeWorkHistoryEntry(entryId)
       deps.incrementArchiveRefresh()
     } catch (err) {
       deps.setWorkNavigationError(err)
@@ -182,8 +184,8 @@ export function createRunActions(deps: RunActionsDeps) {
       const entryId = chatWorkEntry(sessionId).id
       const wasActiveWork = deps.activeWork()?.kind === 'chat' && deps.activeWork()?.sessionId === sessionId
       await deps.deleteChatSession(sessionId)
-      await deps.removeWorkHistoryEntry(entryId)
       if (wasActiveWork) await deps.openNextActivity(entryId)
+      await deps.removeWorkHistoryEntry(entryId)
       deps.incrementArchiveRefresh()
     } catch (err) {
       deps.setWorkNavigationError(err)

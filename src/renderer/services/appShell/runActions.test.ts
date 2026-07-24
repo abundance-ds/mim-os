@@ -156,6 +156,33 @@ describe('app shell run actions', () => {
     })
   })
 
+  it('navigates to the next activity before pruning the closed entry from Work history', async () => {
+    // Pruning first leaves Work history with a null current entry for one
+    // render, which mounts the Files fallback surface as a visible flash.
+    const archived = makeAgentSession({ archived: true, status: 'stopped' })
+    const { deps, agentSessions, setActiveWork } = makeDeps({
+      callKernel: vi.fn(async tool => {
+        if (tool === 'agent.sessions.archive') return { session: archived }
+        throw new Error(`unexpected ${tool}`)
+      }),
+    })
+    agentSessions.push(makeAgentSession({ status: 'done' }))
+    setActiveWork({
+      id: 'work:agent-session:sess-1',
+      kind: 'agent-session',
+      agentId: 'codex',
+      sessionId: 'sess-1',
+      title: 'Codex session',
+    })
+    const actions = createRunActions(deps)
+
+    await actions.archiveAgentSession('sess-1')
+
+    const openOrder = vi.mocked(deps.openNextActivity).mock.invocationCallOrder[0]
+    const removeOrder = vi.mocked(deps.removeWorkHistoryEntry).mock.invocationCallOrder[0]
+    expect(openOrder).toBeLessThan(removeOrder)
+  })
+
   it('archives active agent sessions using the stored agent id for Work history cleanup', async () => {
     const archived = makeAgentSession({ archived: true })
     const { deps, agentSessions, setActiveWork } = makeDeps({

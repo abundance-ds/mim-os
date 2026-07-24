@@ -462,3 +462,17 @@ Re-inserting an `<iframe>` into the DOM resets its browsing context: the app ins
 ## Renderer dev-server port is pinned because localStorage is origin-keyed
 
 `electron.vite.config.mjs` pins the renderer dev server to `port: 5174` with `strictPort: true`. Renderer `localStorage` (recent workspaces, etc.) is scoped to the page origin, and in dev the origin is `http://localhost:<vite-port>`. Without a fixed port, electron-vite falls back to the next free port whenever something else holds 5173, silently landing the app on a fresh empty origin — recent workspaces (and anything else in localStorage) appear to vanish, even though the old origin's data is still on disk in the Electron `Local Storage/leveldb` files. Packaged builds load via `file://` and are unaffected. If this port ever needs to change, expect a one-time "recents reset" for anyone with existing dev-mode localStorage state.
+
+## Cmd+W routing must not trust DOM focus alone
+
+`menu:close-tab` (Cmd/Ctrl+W is a native menu accelerator; the renderer never
+sees the keydown) routes by focus first, Work host second. DOM focus is a lying
+signal on its own: it lingers in the Artifact pane after the last document tab
+closes, and a railed pane's editor can keep `document.activeElement`
+indefinitely. `closeTabActions.ts` therefore lets editor focus claim Cmd+W only
+while the Artifact pane is visible AND has an active tab
+(`hasActiveArtifactTab`); otherwise the close falls through to the visible Work
+surface. Dropping either guard resurfaces the silent no-op where Cmd+W on an
+agent session (observed with a crashed, `status: 'error'` CLI session) does
+nothing — no archive, no navigation — because the close was routed to an empty
+editor.

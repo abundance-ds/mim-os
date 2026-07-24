@@ -39,10 +39,6 @@ const keybindingProfile = computed<TerminalKeybindingProfile>(() => {
 })
 const running = computed(() => session.value?.status === 'running')
 const ended = computed(() => !!session.value && session.value.status !== 'running')
-const endedArchivable = computed(() => {
-  const current = session.value
-  return current?.status === 'stopped' || current?.status === 'interrupted'
-})
 
 const statusLabel = computed(() => {
   const current = session.value
@@ -228,7 +224,6 @@ watch(running, (isRunning) => {
           Resume
         </button>
         <button
-          v-if="endedArchivable"
           class="flex h-6 shrink-0 items-center gap-1.5 rounded-[5px] border border-rule-light bg-surface px-2 font-sans text-[11px] font-semibold text-ink-2 hover:bg-chrome-mid hover:text-ink disabled:opacity-50"
           :disabled="actionBusy === 'resume'"
           title="Archive session"
