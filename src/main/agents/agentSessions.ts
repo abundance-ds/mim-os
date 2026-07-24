@@ -97,6 +97,27 @@ function isCleanTaskText(text: string): boolean {
   return true
 }
 
+// Codex renders these rotating composer examples after the same › marker used
+// for submitted prompts. Raw PTY scrollback cannot distinguish them by marker,
+// so reject the exact built-in examples before accepting a task title.
+const CODEX_COMPOSER_PLACEHOLDERS_LC = new Set([
+  'explain this codebase',
+  'summarize recent commits',
+  'implement {feature}',
+  'find and fix a bug in @filename',
+  'write tests for @filename',
+  'improve documentation in @filename',
+  'run /review on my current changes',
+  'use /skills to list available skills',
+  'check recently modified functions for compatibility',
+  'how many files have been modified?',
+  'will this algorithm scale well?',
+])
+
+function isCodexComposerPlaceholder(text: string): boolean {
+  return CODEX_COMPOSER_PLACEHOLDERS_LC.has(text.replace(/\s+/g, ' ').trim().toLowerCase())
+}
+
 export function extractCodexPrompt(stripped: string): string | null {
   const parts = stripped.split('›')
   if (parts.length < 2) return null
@@ -108,6 +129,7 @@ export function extractCodexPrompt(stripped: string): string | null {
     if (!text || text.length < 3) continue
     if (/^[0-9]+\.\s/.test(text)) continue
     if (/^(Skip|Press enter|Update|Yes|No|Do you trust|Working with|Trusting)/i.test(text)) continue
+    if (isCodexComposerPlaceholder(text)) continue
     if (!isCleanTaskText(text)) continue
     return text
   }
@@ -398,9 +420,12 @@ export function createAgentSessions(options: AgentSessionsOptions): AgentSession
   }
 
   function attemptAutoTitle(live: LiveSession): boolean {
-    const { cwd } = live.record
+    const { agentId, cwd } = live.record
     const cleaned = cleanTitleHint(live.record.titleHint)
-    if (!isTrivialTitle(cleaned, cwd)) {
+    // Codex emits spinner titles while MCP servers start, before the first
+    // submitted prompt. Its window title is therefore never sufficient task
+    // evidence; wait for a non-placeholder › prompt in scrollback.
+    if (agentId !== 'codex' && !isTrivialTitle(cleaned, cwd)) {
       setAutoTitle(live, truncateTitle(cleaned))
       return true
     }
@@ -416,9 +441,13 @@ export function createAgentSessions(options: AgentSessionsOptions): AgentSession
       return true
     }
 
+    // An LLM can turn Codex's composer example or startup output into a
+    // plausible but false task title. Returning false keeps auto-title
+    // retryable when a later spinner arrives after the real prompt.
+    if (agentId === 'codex') return false
+
     if (options.generateTitle) {
       const llmInput = stripped.slice(-800)
-      const agentId = live.record.agentId
       live.autoTitleAttempted = true
       options.generateTitle(llmInput).then(title => {
         if (!title) return

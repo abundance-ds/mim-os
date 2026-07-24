@@ -292,15 +292,15 @@ running Mim instance.
 
 The .NET DOCX worker build writes `resources/docx-worker/<os>-<arch>/` using electron-builder OS names (`mac`, `win`, `linux`), not Node's `process.platform` names (`darwin`, `win32`, `linux`). The runtime resolver still checks legacy local layouts, but packaged builds and CI verification use the electron-builder names. Keep `electron-builder.config.mjs`, `scripts/build-docx-worker.mjs`, `scripts/verify-docx-worker-resource.mjs`, and `src/main/docx/worker.ts` in sync.
 
-## Ptys die with the app: 'running' agent records reconcile to 'interrupted'
+## Ptys die with the app: 'running' agent records reconcile to 'stopped'
 
 node-pty processes are children of the Electron main process; they do not
 survive quit or crash. An agent session record left at `status: 'running'`
 on disk is therefore a lie at the next boot. `reconcileStaleSessions()`
 (`src/main/agents/agentSessions.ts`, called at boot in `index.ts`) marks every
-`running` record without a live pty as `interrupted` and stamps `endedAt`.
-Mirrors the package-jobs boot reconciliation; the renderer maps `interrupted`
-to an error-state row.
+`running` record without a live pty as `stopped` and stamps `endedAt`.
+Mirrors the app-job boot reconciliation; legacy `interrupted` records remain
+readable and render as stopped.
 
 ## Agent session delete events must prune, not upsert
 
@@ -320,6 +320,22 @@ arbitrary byte offset, no line or escape-sequence alignment). This coarse cut
 is deliberate — xterm replay resynchronises on the next escape sequence, so a
 mangled first line is the worst case. Do not "improve" the truncation with
 sequence-aware parsing; it buys nothing visible.
+
+## Codex composer examples are not submitted prompts
+
+Codex renders its rotating composer examples after the same `›` marker used
+for submitted prompts. Raw PTY scrollback therefore contains plausible task
+text such as `Find and fix a bug in @filename` before the user's actual input.
+`extractCodexPrompt` must reject Codex's built-in examples before accepting a
+title candidate. Keep the production list and the regression fixture in
+`agentSessions.test.ts` aligned when Codex changes those examples; accepting
+the first syntactically clean `›` segment silently assigns the example as the
+Activity row title and prevents the one-shot auto-title from correcting it.
+Codex also emits working spinner titles during MCP startup, before any prompt
+exists. A Codex auto-title attempt with no extractable non-placeholder prompt
+must return without using the task-label LLM or accepting the window title.
+The false return keeps the attempt retryable when a later spinner follows the
+real prompt.
 
 ## OSC-terminator BEL is not a needs-input bell
 

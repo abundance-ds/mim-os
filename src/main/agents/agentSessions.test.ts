@@ -940,24 +940,65 @@ describe('agent sessions', () => {
       ptys[0].exit(0)
     })
 
-    it('extracts title from Codex scrollback when titleHint is just the cwd', () => {
+    it('skips Codex composer placeholders when extracting the submitted prompt', () => {
       const { sessions, events, ptys } = makeHarness()
       const { record } = sessions.launch(codex)
       const cwdBase = basename(dir)
       events.length = 0
 
-      // Boot output with Codex prompt
+      // Codex renders rotating examples after the same › marker used for the
+      // submitted prompt. The placeholder appears first in raw scrollback.
       ptys[0].data('╭──────╮\n│ Codex │\n╰──────╯\n')
       ptys[0].data('› Improve documentation in @filename gpt-5.5 xhigh · ~/project\n')
+      ptys[0].data('› Prepare the Thermo Fisher meeting brief gpt-5.5 xhigh · ~/project\n')
 
       // Spinner title with cwd basename triggers auto-title; titleHint is
       // trivial (matches cwd), so scrollback extraction kicks in
       ptys[0].data(`\x1b]0;⠴ ${cwdBase}\x07`)
 
       const session = sessions.get(record.sessionId)!
-      expect(session.title).toBe('Improve documentation in @filename')
+      expect(session.title).toBe('Prepare the Thermo Fisher meeting brief')
 
       ptys[0].exit(0)
+    })
+
+    it('keeps the default Codex title through startup until a submitted prompt appears', () => {
+      vi.useFakeTimers()
+      try {
+        const generateTitle = vi.fn().mockResolvedValue('Commit summary')
+        const { sessions, ptys } = makeHarness({ generateTitle })
+        const { record } = sessions.launch(codex)
+        const cwdBase = basename(dir)
+
+        // Codex renders a composer example and emits working spinner titles
+        // while MCP servers are still starting, before the user submits text.
+        ptys[0].data('› Summarize recent commits gpt-5.5 xhigh · ~/project\n')
+        ptys[0].data(`\x1b]0;⠸ ${cwdBase}\x07`)
+
+        expect(generateTitle).not.toHaveBeenCalled()
+        expect(sessions.get(record.sessionId)!.title).toBe('Codex')
+
+        // Startup titles are not task evidence either, even if their text
+        // would otherwise look descriptive.
+        ptys[0].data('\x1b]0;⠼ Starting MCP servers\x07')
+        expect(generateTitle).not.toHaveBeenCalled()
+        expect(sessions.get(record.sessionId)!.title).toBe('Codex')
+
+        // The launch timer must also leave this attempt retryable.
+        vi.advanceTimersByTime(15100)
+        expect(generateTitle).not.toHaveBeenCalled()
+        expect(sessions.get(record.sessionId)!.title).toBe('Codex')
+
+        // A later spinner frame retries after the actual submitted prompt.
+        ptys[0].data('› Diagnose Codex update failure gpt-5.5 xhigh · ~/project\n')
+        ptys[0].data(`\x1b]0;⠴ ${cwdBase}\x07`)
+
+        expect(sessions.get(record.sessionId)!.title).toBe('Diagnose Codex update failure')
+
+        ptys[0].exit(0)
+      } finally {
+        vi.useRealTimers()
+      }
     })
 
     it('extracts title from Gemini CLI scrollback keystroke accumulation', () => {
@@ -1103,15 +1144,15 @@ describe('agent sessions', () => {
     it('calls generateTitle callback when heuristic extraction fails', async () => {
       const generateTitle = vi.fn().mockResolvedValue('LLM Generated Title')
       const { sessions, ptys } = makeHarness({ generateTitle })
-      const { record } = sessions.launch(codex)
+      const { record } = sessions.launch(gemini)
       const cwdBase = basename(dir)
 
-      // Boot noise only — no › prompt in scrollback
+      // Boot noise only — no prompt in scrollback
       ptys[0].data('boot noise without any prompt marker\n')
 
       // Spinner with cwd basename triggers auto-title; titleHint is trivial,
       // scrollback has no prompt → falls through to generateTitle
-      ptys[0].data(`\x1b]0;⠴ ${cwdBase}\x07`)
+      ptys[0].data(`\x1b]0;✦  Working… (${cwdBase})\x07`)
 
       expect(generateTitle).toHaveBeenCalledTimes(1)
       expect(typeof generateTitle.mock.calls[0][0]).toBe('string')
@@ -1128,11 +1169,11 @@ describe('agent sessions', () => {
       let resolveTitle: (v: string | null) => void
       const generateTitle = vi.fn().mockReturnValue(new Promise<string | null>(r => { resolveTitle = r }))
       const { sessions, ptys } = makeHarness({ generateTitle })
-      const { record } = sessions.launch(codex)
+      const { record } = sessions.launch(gemini)
       const cwdBase = basename(dir)
 
       ptys[0].data('no prompt\n')
-      ptys[0].data(`\x1b]0;⠴ ${cwdBase}\x07`)
+      ptys[0].data(`\x1b]0;✦  Working… (${cwdBase})\x07`)
 
       expect(generateTitle).toHaveBeenCalledTimes(1)
 
@@ -1183,6 +1224,26 @@ describe('agent sessions', () => {
       expect(extractCodexPrompt('› 1. Update now› 2. Skip› Fix it gpt-5.5 default · ~/f')).toBe('Fix it')
       expect(extractCodexPrompt('no marker at all')).toBeNull()
       expect(extractCodexPrompt('╭── boot chrome ──╮')).toBeNull()
+    })
+
+    it('extractCodexPrompt ignores rotating composer examples', () => {
+      const scrollback = [
+        '› Explain this codebase gpt-5.5 xhigh · ~/app',
+        '› Summarize recent commits gpt-5.5 xhigh · ~/app',
+        '› Implement {feature} gpt-5.5 xhigh · ~/app',
+        '› Find and fix a bug in @filename gpt-5.5 xhigh · ~/app',
+        '› Write tests for @filename gpt-5.5 xhigh · ~/app',
+        '› Improve documentation in @filename gpt-5.5 xhigh · ~/app',
+        '› Run /review on my current changes gpt-5.5 xhigh · ~/app',
+        '› Use /skills to list available skills gpt-5.5 xhigh · ~/app',
+        '› Check recently modified functions for compatibility gpt-5.5 xhigh · ~/app',
+        '› How many files have been modified? gpt-5.5 xhigh · ~/app',
+        '› Will this algorithm scale well? gpt-5.5 xhigh · ~/app',
+        '› Prepare the quarterly research review gpt-5.5 xhigh · ~/app',
+      ].join('\n')
+
+      expect(extractCodexPrompt(scrollback)).toBe('Prepare the quarterly research review')
+      expect(extractCodexPrompt('› Find and fix a bug in @filename gpt-5.5 xhigh · ~/app')).toBeNull()
     })
 
     it('extractGeminiPrompt finds the longest typed prompt', () => {
