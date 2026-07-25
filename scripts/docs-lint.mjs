@@ -14,7 +14,6 @@ import { dirname, resolve, join, sep } from 'path'
 import { fileURLToPath } from 'url'
 import { loadToolList, loadGateModule } from './docs-gen/toolCatalog.mjs'
 import { parseShortcutsFromVue, extractAllKbdCombos } from './docs-gen/shortcuts.mjs'
-import { findMimAppsPath, loadAppManifests } from './docs-gen/apps.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -76,25 +75,6 @@ export function loadSettingsSections() {
     labels.set(m[2].toLowerCase(), m[1]) // lowercase too
   }
   return labels
-}
-
-/**
- * Load app-provided named tool names from mim-apps manifests.
- * These are tools like issues.list, knowledge.search, etc. that are
- * registered dynamically when apps are loaded, not in the headless kernel.
- */
-export function loadAppToolNames() {
-  const names = new Set()
-  const packagesDir = findMimAppsPath()
-  if (!packagesDir) return names
-  const apps = loadAppManifests(packagesDir)
-  for (const app of apps) {
-    const tools = app.provides?.tools ?? []
-    for (const t of tools) {
-      if (t.name) names.add(t.name)
-    }
-  }
-  return names
 }
 
 /**
@@ -261,7 +241,7 @@ export function collectManualFiles() {
  */
 export function runLint() {
   const toolNames = loadToolNames()
-  const appToolNames = loadAppToolNames()
+  const appToolNames = new Set()
   const kbdCombos = loadKbdCombos()
   const settingsLabels = loadSettingsSections()
   const pageIds = collectPageIds()

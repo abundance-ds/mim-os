@@ -7,6 +7,7 @@ import { createHeadlessKernel } from '@main/headless.js'
 import { PermissionDeniedError } from '@main/security/gate.js'
 import type { AppStatus } from '@main/tools/coreApps.js'
 import { MCP_TOOL_SPECS } from '@main/server/server.js'
+import { buildTeamReleaseIndex } from '@main/team/teamReleaseContents.js'
 
 const originalHome = process.env.HOME
 let isolatedHome: string
@@ -235,6 +236,7 @@ describe('createHeadlessKernel', () => {
     writeFileSync(join(project, 'mim.yaml'), 'name: live-team-test\n')
     writeFileSync(join(seed, 'team.yaml'), 'name: Live Team\n')
     writeTeamPackage(seed, 'team-board')
+    writeTeamIndex(seed)
     execFileSync('git', ['init', '--bare', remote])
     execFileSync('git', ['init', '-b', 'main'], { cwd: seed })
     execFileSync('git', ['config', 'user.email', 'mim@example.test'], { cwd: seed })
@@ -265,7 +267,7 @@ describe('createHeadlessKernel', () => {
     }
   })
 
-  it('refreshes apps after Team sync without changing Project issue or knowledge data', async () => {
+  it('refreshes apps after an accepted Team update without changing Project issue or knowledge data', async () => {
     const oldHome = process.env.HOME
     const personalHome = join(dir, 'person')
     const project = join(dir, 'project')
@@ -281,6 +283,7 @@ describe('createHeadlessKernel', () => {
     writeFileSync(issuePath, '# Keep this issue\n\nProject-owned.\n')
     writeFileSync(knowledgePath, '# Keep this knowledge\n\nProject-owned.\n')
     writeFileSync(join(seed, 'team.yaml'), 'name: Live Team\n')
+    writeTeamIndex(seed)
     execFileSync('git', ['init', '--bare', remote])
     execFileSync('git', ['init', '-b', 'main'], { cwd: seed })
     execFileSync('git', ['config', 'user.email', 'mim@example.test'], { cwd: seed })
@@ -302,10 +305,11 @@ describe('createHeadlessKernel', () => {
       await kernel.tools.call('team.connect', { repository: remote }, ctx)
 
       writeTeamPackage(seed, 'synced-app')
+      writeTeamIndex(seed)
       execFileSync('git', ['add', '.'], { cwd: seed })
       execFileSync('git', ['commit', '-m', 'add synced app'], { cwd: seed })
       execFileSync('git', ['push'], { cwd: seed })
-      await kernel.tools.call('team.sync', {}, ctx)
+      await kernel.tools.call('team.update', {}, ctx)
 
       const status = await kernel.tools.call('app.status', {}, ctx) as { apps: AppStatus[] }
       expect(status.apps).toContainEqual(expect.objectContaining({
@@ -333,6 +337,13 @@ function writeWorkspacePackage(root: string, id: string): void {
 function writeTeamPackage(root: string, id: string): void {
   const packageDir = join(root, 'apps', id)
   writePackageManifest(packageDir, id)
+}
+
+function writeTeamIndex(root: string): void {
+  writeFileSync(
+    join(root, 'team-index.json'),
+    JSON.stringify(buildTeamReleaseIndex(root, 'Live Team')),
+  )
 }
 
 function writePackageManifest(packageDir: string, id: string): void {

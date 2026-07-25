@@ -21,9 +21,8 @@ backward-compat obligation. No permanent aliases. Two concessions only:
 2. **Boot-time auto-migration of `.mim/` paths** (rename dir/file if the old
    name exists) so our own workspaces survive. One release, then the shim dies.
 
-The external `shoulders-ai/mim-apps` repo migrates in lockstep (one
-coordinated PR; `npm run test:packages:compat` — itself renamed — is the
-verification).
+Optional Team repositories migrate their owned apps independently and verify
+them with `npm run test:team:compat`.
 
 ## Decision table
 
@@ -72,7 +71,7 @@ verification).
 |---|---|---|
 | D1 | Full-depth chat rename (types + storage dir), or UI/docs only? | **Full depth.** Zero users; doing it later costs more. |
 | D2 | Sidebar section "Activity" → "Runs"? | **Yes.** Alternative (keep "Activity" as a plain label) re-opens the noun. |
-| D3 | Workspace `packages/` folder → `apps/`? Committed user contract + mim-apps layout. | **Yes, hard rename;** loader dual-reads `apps/` then `packages/` for one release; scaffold + docs say `apps/`. |
+| D3 | Workspace `packages/` folder → `apps/`? Committed user contract + Team app layout. | **Yes, hard rename;** loader dual-reads `apps/` then `packages/` for one release; scaffold + docs say `apps/`. |
 | D4 | Keep `package.json` as manifest filename? | **Yes** (npm tooling, VS Code precedent). |
 | D5 | Lifecycle verb: "Done" (current footer button) vs "Archive"? | **Done / Reopen.** Warmer, matches research workflow; "Archive" dies. |
 | D6 | Rename persisted `archived` field → `done`? | **Yes,** migrate-on-read; trivial while user count ≈ 0. |
@@ -90,7 +89,7 @@ verification).
   #14 review-word cleanup, #12 delete dead RunKind.
 - **Wave 2 — App rename** (#1, #8): tools, SDK, IPC, events, dirs, types,
   templates + DEFAULT_AGENTS_MD + TOOL_CATALOG, docs renames, boot migration,
-  coordinated mim-apps PR, compat suite green.
+  coordinated Team updates, compatibility suite green.
 - **Wave 3 — Chat & agent-run rename** (#2, #3): the largest; includes
   `.mim/sessions/`→`.mim/chats/` migration and MCP/search renames.
 - **Wave 4 — Collections & Snapshots** (#6, #7): tool namespaces, boot

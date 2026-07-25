@@ -1,11 +1,9 @@
 # DOCX Review Workflow
 
-Status: implemented as an external package plus main-process DOCX
-infrastructure. The package lives in the
-[shoulders-ai/mim-apps](https://github.com/shoulders-ai/mim-apps)
-monorepo at `packages/docx-review/` (with its own tests). A source maintainer
-places it in a Team `apps/` directory, a Project `packages/` directory, or the
-Mim build's `resources/apps/` directory; it is not bundled in this repo.
+Status: implemented as a Team-owned app plus main-process DOCX infrastructure.
+The current company app lives at `mim-team/apps/docx-review/` with its own
+tests. Another Team or Project may own a separate implementation; the app is
+not bundled in core.
 
 The package owns the review orchestration and UI. The Electron main process owns
 workspace-safe file access, model key resolution, and Word/Open XML operations.
@@ -13,16 +11,16 @@ The original DOCX is never modified.
 
 ## Source Map
 
-Package-layer paths below are relative to the shoulders-ai/mim-apps repo;
-`src/`, `sidecar/`, and `scripts/` paths are in this repo.
+App-layer paths below are relative to a Team repository; `src/`, `sidecar/`,
+and `scripts/` paths are in this repo.
 
 | Layer | Source | Role |
 |---|---|---|
-| Package manifest | `packages/docx-review/package.json` | Declares UI, backend, workspace read/write, AI, and reference-search HTTP permissions. |
-| Package UI | `packages/docx-review/ui/index.html` | File picker, submit state, real-signal processing panel, report/document result view, comment rail. |
-| Package backend | `packages/docx-review/backend/index.mjs` | Gatekeeper, reviewer agents, reference search, reconciliation handoff, report write, HTML anchoring, DOCX annotation. |
-| Package skill | `packages/docx-review/skills/docx-peer-review/SKILL.md` | Chat-facing instructions for starting a review job. |
-| Guidance library | `packages/docx-review/guidance/` | Statistics, reporting-standard, and argumentation chapters loaded by reviewer tools. |
+| App manifest | `apps/docx-review/package.json` | Declares UI, backend, workspace read/write, AI, and reference-search HTTP permissions. |
+| App UI | `apps/docx-review/ui/index.html` | File picker, submit state, real-signal processing panel, report/document result view, comment rail. |
+| App backend | `apps/docx-review/backend/index.mjs` | Gatekeeper, reviewer agents, reference search, reconciliation handoff, report write, HTML anchoring, DOCX annotation. |
+| App skill | `apps/docx-review/skills/docx-peer-review/SKILL.md` | Chat-facing instructions for starting a review job. |
+| Guidance library | `apps/docx-review/guidance/` | Statistics, reporting-standard, and argumentation chapters loaded by reviewer tools. |
 | Package runtime | `src/main/packages/packageRuntime.ts` | Provides `ctx.ai`, `ctx.documents.docx`, package data, progress, abort, audit, and tool calls. |
 | Document tools | `src/main/tools/documents.ts` | Registers `documents.docx.*` tools with workspace path checks. |
 | DOCX reader | `src/main/docx/reader.ts` | Mammoth DOCX to HTML/Markdown/image extraction; supported PNG/JPEG/WEBP images downscale to a 1568px long edge via Sharp with original-byte fallback, unsupported images convert to PNG when possible. |

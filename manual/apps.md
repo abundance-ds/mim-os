@@ -37,8 +37,9 @@ capabilities, and developer diagnostics. Team and Project apps that contain
 code or request file, network, secret, or AI access show a local permission
 review before first use.
 
-Team apps update when the Team source syncs. Project apps update with Project
-sync. Mim apps update with Mim itself.
+Team apps arrive in a Team release that lists what changed before you select
+Update. An app that asks for new access requires review again. Project apps
+update with the Project; Mim apps update with Mim itself.
 
 If your Team apps are not visible yet, start with [team](team). Connecting a
 Team makes its apps available; it does not enable them automatically.
@@ -53,7 +54,7 @@ connection details remain available under Customise.
 
 Click New app in Apps & agents. Choose a starter template, an id and display
 name, then choose the current Project or the connected Team as its destination.
-Project apps live in `packages/<id>/`; Team apps live in the Team source's
+Project apps live in `packages/<id>/`; Team apps live in the Team repository's
 `apps/<id>/`.
 
 From there, edit the app files and ask the agent to validate and reload it.

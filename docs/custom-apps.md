@@ -1,7 +1,7 @@
 # Custom apps
 
 Custom apps are file-native capability bundles authored for one Project or
-shared through the connected Team source. Mim also ships built-in apps. There
+shared through the connected Team. Mim also ships built-in apps. There
 is no app registry, source list, global install cache, or shared activation
 flag.
 
@@ -47,10 +47,10 @@ Project checkout. The choice lives only in:
 That file is gitignored. An activation toggle never edits `mim.yaml`,
 `team.yaml`, or another person's state.
 
-Connecting or syncing a Team refreshes the live app catalog. It does not
-silently enable new apps: open Settings -> Apps & agents, review a Team app's
-declared permissions, and enable it for the current Project. Only enabled apps
-with a view receive Navigator launchers. App source and app data are separate;
+Connecting or accepting a Team update refreshes the live app catalog. It does
+not silently enable new apps: open Settings -> Apps & agents, review a Team
+app's declared permissions, and enable it for the current Project. Only enabled
+apps with a view receive Navigator launchers. App source and app data are separate;
 for example, a Team-provided Board still reads the current Project's `issues/`
 directory.
 
@@ -100,19 +100,21 @@ jobs, named tools, agent profiles, and the SDK remain the same regardless of
 origin.
 
 Apps that contain executable backend or terminal UI code, or request effective
-permissions, require a local permission review before first activation when
-they come from Project or Team. Mim-shipped apps are trusted by origin. The
-acknowledgement is local and does not create a source trust system.
+permissions, require a local permission review before activation when they
+come from Project or Team. The acknowledgement stores the exact reviewed
+access. An update that expands access requires review again; unchanged or
+reduced access does not. Mim-shipped apps are trusted by origin.
 
 ## Updates
 
-Project apps update with Project sync, Team apps with Team sync, and Mim apps
-with the Mim application updater. The app catalog watches all three roots and
-rescans after file changes. No per-app registry download lifecycle exists.
+Project apps update with their Project, Team apps arrive in a person-approved
+Team release, and Mim apps update with the Mim application updater. A Team
+release lists all app changes from `team-index.json`; apps are not downloaded
+or updated independently.
 
 ## Related docs
 
 - [App system API](app-system-api.md)
 - [Package runtime](package-runtime.md)
 - [Skills](skills.md)
-- [Team source and setup](team.md)
+- [Team and setup](team.md)

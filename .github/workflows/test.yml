@@ -15,11 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/checkout@v4
-        with:
-          repository: shoulders-ai/mim-apps
-          path: mim-apps
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -34,14 +29,7 @@ jobs:
       - run: npm run build
       - run: npm test -- --silent
 
-      - name: Verify app compatibility
-        env:
-          MIM_PACKAGES_DIR: ${{ github.workspace }}/mim-apps
-        run: npm run test:packages:compat
-
       - name: Verify generated documentation
-        env:
-          MIM_APPS_PATH: ${{ github.workspace }}/mim-apps
         run: |
           npm run docs:gen
           git diff --exit-code -- manual

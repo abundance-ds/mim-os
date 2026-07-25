@@ -42,7 +42,7 @@ describe('direct app sources', () => {
     temp = mkdtempSync(join(tmpdir(), 'mim-app-sources-'))
     project = join(temp, 'project')
     team = join(temp, 'team-apps')
-    mim = join(temp, 'mim-apps')
+    mim = join(temp, 'mim-built-ins')
     mkdirSync(join(project, 'packages'), { recursive: true })
     mkdirSync(team, { recursive: true })
     mkdirSync(mim, { recursive: true })

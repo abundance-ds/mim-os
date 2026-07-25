@@ -326,10 +326,11 @@ approval.
 
 | tool | description | effect | approval |
 |---|---|---|---|
-| `team.status` | Read the one Personal Team connection, checkout contract, contribution summary, and Git sync state. | read | auto |
-| `team.connect` | Connect the one Team Git repository using system Git credentials, clone it, and validate its fixed contract. | external | ask |
-| `team.open` | Resolve the connected Team checkout and its fixed contribution paths. | read | auto |
-| `team.sync` | Commit, rebase, and push writable Team changes using the connected repository and system Git credentials. | external | ask |
+| `team.status` | Read the optional Team connection, contribution summary, and update state. | read | auto |
+| `team.connect` | Connect one company Team from its repository link using the computer’s existing Git access. | external | ask |
+| `team.open` | Open the connected Team and resolve its contribution folders. | read | auto |
+| `team.check` | Check whether the connected Team has an update without changing the installed Team content. | external | ask |
+| `team.update` | Install the available connected Team update as one validated release. | external | ask |
 
 ## telemetry
 

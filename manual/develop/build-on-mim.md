@@ -14,7 +14,7 @@ Mim is a desktop runtime for bespoke agentic applications. You extend it by writ
 
 ## Apps
 
-An app is a file-native capability bundle: backend jobs, AI tools, data storage, and optional iframe UI, declared in a `package.json` manifest with a `mim` block. Apps run under a scoped runtime context that enforces identity, permissions, audit, and cancellation. Headless apps (no UI) are first-class. The full manifest, backend API, SDK, and runtime context are documented in [app system and API](app-system-api). The generated [app catalog](/develop/apps) lists apps maintained in the external mim-apps repository.
+An app is a file-native capability bundle: backend jobs, AI tools, data storage, and optional iframe UI, declared in a `package.json` manifest with a `mim` block. Apps run under a scoped runtime context that enforces identity, permissions, audit, and cancellation. Headless apps (no UI) are first-class. The full manifest, backend API, SDK, and runtime context are documented in [app system and API](app-system-api). Companies can maintain their own apps in an optional Team repository; Project-specific apps remain in the Project.
 
 ## Skills
 

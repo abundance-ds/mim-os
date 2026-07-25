@@ -102,5 +102,5 @@ id. Activation and permission acknowledgement remain local under
 
 The complete backend API, SDK reference, activation model, trust boundary,
 origin workflow, and diagnostics are documented in `docs/app-system-api.md`
-and `docs/package-runtime.md` in the repository, and in the
-[mim-apps README](https://github.com/shoulders-ai/mim-apps).
+and `docs/package-runtime.md` in the repository. Each optional Team documents
+the apps it owns.

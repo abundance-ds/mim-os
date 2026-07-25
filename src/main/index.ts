@@ -161,6 +161,7 @@ let telemetryShutdown: (() => Promise<void>) | null = null
 let subagentShutdown: (() => Promise<void>) | null = null
 let appUpdateInitialTimer: ReturnType<typeof setTimeout> | null = null
 let appUpdateInterval: ReturnType<typeof setInterval> | null = null
+let teamUpdateInterval: ReturnType<typeof setInterval> | null = null
 let historyBaselineTimer: ReturnType<typeof setTimeout> | null = null
 let routineTickerInterval: ReturnType<typeof setInterval> | null = null
 let routineAutomationStop: (() => Promise<void>) | null = null
@@ -359,6 +360,16 @@ function clearAppUpdateTimers(): void {
     clearInterval(appUpdateInterval)
     appUpdateInterval = null
   }
+}
+
+function scheduleTeamUpdateChecks(check: () => Promise<void>): void {
+  if (teamUpdateInterval != null) clearInterval(teamUpdateInterval)
+  teamUpdateInterval = setInterval(() => {
+    void check().catch((error) => {
+      console.warn('[team] update check failed', error)
+    })
+  }, 15 * 60 * 1000)
+  teamUpdateInterval.unref?.()
 }
 
 function toWorkspaceRelative(workspace: string | null, absPath: string): string {
@@ -726,9 +737,9 @@ async function boot(): Promise<void> {
         },
       })
     },
-    emit: (channel) => {
-      mainWindow?.webContents.send(channel)
-      server?.broadcast(channel, {})
+    emit: (channel, payload) => {
+      mainWindow?.webContents.send(channel, payload)
+      server?.broadcast(channel, payload ?? {})
     },
   })
   backgroundSync = createBackgroundSync({
@@ -766,15 +777,27 @@ async function boot(): Promise<void> {
         || current.state === 'invalid'
         || (current.state === 'stopped' && !current.retryable)
       ) return
-      const result = await tools.call('team.sync', {}, { actor: 'system' }) as Awaited<ReturnType<typeof teamSource.sync>>
-      if (result.state === 'stopped' && result.retryable) {
-        throw new Error(result.message)
+      if (current.dirty || current.ahead > 0) {
+        const published = await teamSource.publish()
+        if (published.retryable) {
+          throw new Error(published.message)
+        }
       }
+      await tools.call('team.check', {}, { actor: 'system' })
     },
     onError: (scope, error) => {
       console.warn(`[sync] ${scope} will retry`, error)
       broadcastToRenderers('sync:changed', { scope })
     },
+  })
+  scheduleTeamUpdateChecks(async () => {
+    const current = await teamSource.status()
+    if (
+      !current.repository
+      || current.state === 'invalid'
+      || (current.state === 'stopped' && !current.retryable)
+    ) return
+    await tools.call('team.check', {}, { actor: 'system' })
   })
   registerTraceTools(tools)
   registerHistoryTools(tools, history)
@@ -1594,6 +1617,10 @@ app.on('before-quit', (event) => {
 
 app.on('will-quit', () => {
   clearAppUpdateTimers()
+  if (teamUpdateInterval != null) {
+    clearInterval(teamUpdateInterval)
+    teamUpdateInterval = null
+  }
   if (routineTickerInterval != null) {
     clearInterval(routineTickerInterval)
     routineTickerInterval = null

@@ -196,7 +196,7 @@ export function approvalNote(approval: ApprovalLike): string {
   }
   if (approval.pathKind === 'sensitive') return 'This file is in a sensitive location. Check it before allowing.'
   if (approval.pathKind === 'outside-workspace') return 'This is outside your workspace folder.'
-  if (approval.pathKind === 'team') return 'This writes to your Team source.'
+  if (approval.pathKind === 'team') return 'This writes to your Team.'
   return ''
 }
 

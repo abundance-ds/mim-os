@@ -95,7 +95,12 @@ All origins default to disabled. `app.enable` and `app.disable` write only:
 {
   "enabled": ["example"],
   "disabled": [],
-  "trusted": ["example@*"]
+  "trusted": [
+    {
+      "id": "example",
+      "grants": ["code.backend", "workspace.read"]
+    }
+  ]
 }
 ```
 
@@ -103,8 +108,10 @@ at `<project>/.mim/packages/enabled.json`. The file is private runtime state.
 It is not a Project or Team declaration.
 
 Project and Team apps with a backend, terminal UI, or effective workspace, AI,
-HTTP, or secret permissions need one local permission acknowledgement. `app.trust`
-records it. Mim apps do not require this prompt.
+HTTP, or secret permissions need local permission acknowledgement. `app.trust`
+records the exact reviewed grant tokens. An update that adds access requires a
+new review; an update that keeps or reduces access remains trusted. Mim apps do
+not require this prompt.
 
 ## Management tools
 
@@ -206,6 +213,6 @@ For local development:
 4. enable it in Apps & agents after reviewing access;
 5. inspect Developer details for loader and runtime diagnostics.
 
-Compatibility with the external app repository is exercised by
-`npm run test:packages:compat`, which stages apps into the current direct
-Project-source layout and runs loader/runtime/tool smoke hooks.
+Compatibility with an optional Team repository is exercised by
+`MIM_TEAM_PATH=/path/to/team npm run test:team:compat`, which stages every app
+listed in that Team's release index and runs loader/runtime/tool smoke hooks.

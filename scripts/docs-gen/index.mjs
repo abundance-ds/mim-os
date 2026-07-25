@@ -7,7 +7,6 @@
 import { generateToolCatalog } from './toolCatalog.mjs'
 import { generateShortcuts } from './shortcuts.mjs'
 import { generateModels } from './models.mjs'
-import { generateApps } from './apps.mjs'
 
 async function main() {
   const results = []
@@ -41,20 +40,6 @@ async function main() {
   } catch (err) {
     console.error(`  tools: FAILED — ${err.message}`)
     console.error('    Ensure `npm run build` has been run first.')
-    exitCode = 1
-  }
-
-  // 4. Apps (optional — warns if mim-apps not found)
-  try {
-    const r = generateApps()
-    results.push({ name: 'apps', ...r })
-    if (r.skipped) {
-      console.log('  apps: skipped (mim-apps not found)')
-    } else {
-      console.log(`  apps: ${r.appCount} apps -> ${r.path}`)
-    }
-  } catch (err) {
-    console.error(`  apps: FAILED — ${err.message}`)
     exitCode = 1
   }
 

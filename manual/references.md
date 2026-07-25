@@ -75,7 +75,7 @@ The export dialog also has a "Choose .bib" button so you can select or change th
 
 You can edit your `.bib` file directly — it is a standard BibTeX file, and Mim rereads it the next time citation data is needed. Mim also supports importing a `.bib` file as a document: the import converts each entry into a readable markdown listing with its key, type, authors, title, year, and other fields.
 
-The References app (available from the app catalog) adds a `references.add` tool that captures DOIs into a managed library, which also powers the "Add & cite" completion described above. See [apps](apps) for installing apps.
+An optional Team or Project app can add DOI capture and a managed reference library. Open **Settings > Apps & agents** to review the apps available in the current Mim installation.
 
 ::: under-the-hood
 The citation pipeline lives in `citations.ts`. BibTeX is parsed into `BibEntry` objects, projected to CSL-JSON, and processed by citeproc for the chosen style. Inline `[@key]` groups are replaced with formatted labels (author-year or numeric), and a bibliography of renderer-neutral runs (`{ text, italic }`) is produced for both the HTML/PDF and DOCX renderers to consume directly.

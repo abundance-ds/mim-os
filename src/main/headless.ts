@@ -258,6 +258,9 @@ export function createHeadlessKernel(options: HeadlessKernelOptions = {}): Headl
         refreshSlack: async () => { await slackListener?.refresh() },
       })
     },
+    emit: (channel, payload) => {
+      alwaysOnServer?.broadcast(channel, payload ?? {})
+    },
   })
   registerTraceTools(tools)
   registerHistoryTools(tools, history)
@@ -412,17 +415,18 @@ export function createHeadlessKernel(options: HeadlessKernelOptions = {}): Headl
           const current = await tools.call('team.status', {}, { actor: 'system' }) as {
             repository?: string | null
             state?: string
+            dirty?: boolean
+            ahead?: number
             retryable?: boolean
           }
           if (!current.repository || current.state === 'invalid' || (current.state === 'stopped' && !current.retryable)) return
-          const result = await tools.call('team.sync', {}, { actor: 'system' }) as {
-            state?: string
-            retryable?: boolean
-            message?: string
+          if (current.dirty || (current.ahead ?? 0) > 0) {
+            const published = await teamSource.publish()
+            if (published.retryable) {
+              throw new Error(published.message ?? 'Team publishing is waiting to retry')
+            }
           }
-          if (result.state === 'stopped' && result.retryable) {
-            throw new Error(result.message ?? 'Team sync is waiting to retry')
-          }
+          await tools.call('team.check', {}, { actor: 'system' })
         },
         onError: (_scope, error) => {
           alwaysOnState.lastError = error instanceof Error ? error.message : String(error)

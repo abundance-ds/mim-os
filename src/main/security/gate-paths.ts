@@ -177,7 +177,7 @@ function classifyTeamPath(absolutePath: string, base: string): PermissionPathCla
   if (segments[0] !== '.mim' || segments[1] !== 'team') return null
   return {
     kind: 'team',
-    reason: 'Connected Team source',
+    reason: 'Connected Team',
     absolutePath,
     isTeamRoot: segments.length === 2,
   }

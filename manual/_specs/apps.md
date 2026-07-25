@@ -7,10 +7,8 @@ Purpose: extending Mim — using apps from direct origins and making your own.
 - What an app is: an installable unit that can add views to the sidebar, tools the
   agent can call, skills, and background jobs. Apps run sandboxed and call the same
   permissioned tools as everyone else — one sentence, calm.
-- The catalog: reference apps live in the mim-apps repository; name the set with one
-  line each (Board, Knowledge, Slides, DOCX Review, Scholar, References, Import-MD —
-  verify the current list against the mim-apps repo; do not
-  invent descriptions).
+- Ownership: Mim may bundle core apps, while each optional Team and Project
+  owns its own app set. Do not present one company's Team as a global catalog.
 - Availability: Mim apps come from the build, Team apps from `apps/`, and
   Project apps from `packages/`; Project overrides Team, which overrides Mim.
 - Activation: Settings > Apps & agents provides permission review and a local

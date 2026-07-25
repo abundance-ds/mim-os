@@ -20,7 +20,7 @@
     "docx-worker:build": "node scripts/build-docx-worker.mjs",
     "preview": "electron-vite preview",
     "test": "vitest run",
-    "test:packages:compat": "MIM_PACKAGE_COMPAT=1 vitest run scripts/package-compat.test.ts",
+    "test:team:compat": "MIM_TEAM_COMPAT=1 vitest run scripts/team-compat.test.ts",
     "test:watch": "vitest",
     "dist": "electron-vite build && electron-builder --config electron-builder.config.mjs",
     "dist:mac": "electron-vite build && electron-builder --config electron-builder.config.mjs --mac",

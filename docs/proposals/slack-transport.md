@@ -449,13 +449,13 @@ Every phase lands with `npm run test` green.
    reply partial-failure handling, manual real-Slack verification, and final
    documentation/manual polish.
 
-Run `npm run test:packages:compat` after phases 3 and 4 because AI runtime and
+Run `npm run test:team:compat` with `MIM_TEAM_PATH` after phases 3 and 4 because AI runtime and
 named-tool context propagation are shared with external apps.
 
 ## Verification
 
 - `npm run test` after every phase.
-- `npm run test:packages:compat` after the cutover and final phase.
+- `npm run test:team:compat` with the relevant Team after the cutover and final phase.
 - `npm run docs:gen && npm run docs:lint` after current-state docs change.
 - Manual test with a real Slack app:
   1. connect credentials;

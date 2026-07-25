@@ -1207,7 +1207,7 @@ describe('agent sessions', () => {
       expect(isTrivialTitle('Codex')).toBe(true)
       expect(isTrivialTitle('Gemini CLI')).toBe(true)
       expect(isTrivialTitle('tmp', '/Users/test/tmp')).toBe(true)
-      expect(isTrivialTitle('mim-apps', '/Users/test/mim-apps')).toBe(true)
+      expect(isTrivialTitle('mim-team', '/Users/test/mim-team')).toBe(true)
       expect(isTrivialTitle('Ready (mim-packages)', '/Users/test/mim-packages')).toBe(true)
       expect(isTrivialTitle('Working… (project)', '/Users/test/project')).toBe(true)
       expect(isTrivialTitle('Ready')).toBe(true)

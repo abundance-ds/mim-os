@@ -1,20 +1,21 @@
 # Spec: team (order 4)
 
-Purpose: explain in plain language how to create, connect, use, and troubleshoot
-one Team source.
+Purpose: explain in plain language how to connect, update, use, and optionally
+create one company Team.
 
 ## Outline
 
-- A Team is one Git repository that contributes reusable files, instructions,
-  skills, apps, and routines to every Project.
-- Explicit safety boundary: connecting or syncing does not move or delete
+- A Team is an optional company repository; it is not global Mim content.
+- Explicit safety boundary: connecting or updating does not move or delete
   Project data such as `issues/` or `knowledge/`.
 - Setup: system Git access, credential-free HTTPS or SSH URL, Settings > Team.
-- Minimal and complete folder structures, including `team.yaml`.
+- Release journey: quiet check, change summary, one Update action, exact access
+  re-review on permission expansion.
+- Folder structure, including `team.yaml` and generated `team-index.json`.
 - What appears where.
 - Availability versus activation, local permission review, and why an app may
   be available without a Navigator launcher.
-- Writable checkout and conflict-safe sync.
+- Writable checkout, background publishing, and conflict-safe updates.
 - Short troubleshooting section.
 
 ## Boundaries

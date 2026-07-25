@@ -95,12 +95,12 @@ under the checkout's gitignored `.mim/`.
 
 ## Teams
 
-A Team is one writable Git repository that contributes shared files,
-instructions, skills, apps, and routines to every Project. Connect it once from
+A Team is an optional company repository that contributes shared files,
+instructions, skills, apps, and routines to every Project on that installation. Connect it once from
 Settings > Team with a credential-free HTTPS or SSH repository location.
 Connecting makes Team apps available but does not enable them or grant their
 permissions; each person reviews and enables apps independently for each local
-Project checkout. Team sync never moves or deletes Project data.
+Project checkout. A Team update never moves or deletes Project data.
 
 For the repository layout, first-time setup, authentication, activation, and
 troubleshooting, see [docs/team.md](docs/team.md).
@@ -108,7 +108,7 @@ troubleshooting, see [docs/team.md](docs/team.md).
 ## Skills
 
 Skills are file-native instructions that teach Mim recurring work without
-requiring a new app. The connected `mim` Team source provides a
+requiring a new app. The connected `mim` Team provides a
 `build-email-voice` skill that uses the existing Gmail connection to learn a
 person's durable writing tendencies, confirm them once, and create a Personal
 `email-voice` skill. Drafts stay in Chat as Markdown, and the generated skill
@@ -127,8 +127,7 @@ with the same id. Settings > Apps & agents shows the winning origin and keeps
 activation private to this person and local Project checkout. It can create
 Project or Team starter apps, validate them, reload the catalog, and open their
 folders. App-root `README.md` files are auto-discovered as read-only
-documentation tabs. The external
-[shoulders-ai/mim-apps](https://github.com/shoulders-ai/mim-apps) repository is
-the maintained compatibility catalog for app authors.
+documentation tabs. Each optional Team repository is authoritative for its own
+company apps and verifies them against Mim's app contract.
 
 For building workspace-specific capabilities, see [docs/custom-apps.md](docs/custom-apps.md).

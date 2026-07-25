@@ -13,6 +13,7 @@ import {
   readdirSync,
   renameSync,
   rmSync,
+  writeFileSync,
 } from 'fs'
 import { join } from 'path'
 import { promisify } from 'util'
@@ -32,6 +33,13 @@ import {
   writeSyncStop,
 } from '@main/sync/conflicts.js'
 import { loadUserConfig, setTeamConnection } from '@main/userConfig.js'
+import {
+  compareTeamReleases,
+  parseTeamRelease,
+  type TeamReleaseChange,
+  type TeamReleaseIndex,
+} from './teamRelease.js'
+import { assertTeamReleaseContents } from './teamReleaseContents.js'
 
 const execFileAsync = promisify(execFile)
 const CONTRIBUTION_DIRS = ['files', 'skills', 'apps', 'routines'] as const
@@ -40,6 +48,7 @@ export interface TeamCheckout {
   name: string
   root: string
   manifestPath: string
+  indexPath: string
   instructionsPath: string | null
   filesPath: string
   skillsPath: string
@@ -80,13 +89,24 @@ export interface TeamSourceStatus {
   conflicts: string[]
   retryable: boolean
   message: string
+  update: {
+    state: 'unknown' | 'current' | 'available'
+    changes: TeamReleaseChange[]
+    checkedAt: string | null
+    availableRevision?: string
+    appliedAt?: string
+    recentChanges?: TeamReleaseChange[]
+    error?: string
+  }
 }
 
 export interface TeamSource {
   status(): Promise<TeamSourceStatus>
   connect(repository: string): Promise<TeamSourceStatus>
   open(): Promise<TeamCheckout>
-  sync(): Promise<TeamSourceStatus>
+  check(): Promise<TeamSourceStatus>
+  publish(): Promise<TeamSourceStatus>
+  update(): Promise<TeamSourceStatus>
 }
 
 export interface CreateTeamSourceOptions {
@@ -117,6 +137,12 @@ export function resolveTeamCheckout(root: string): TeamCheckout {
     throw new Error('team.yaml must define a non-empty name')
   }
   const name = nameValue.trim()
+  const indexPath = join(root, 'team-index.json')
+  requireRegularFile(indexPath, 'team-index.json is required')
+  const release = parseTeamRelease(readFileSync(indexPath, 'utf-8'))
+  if (release.team !== name) {
+    throw new Error('team-index.json team must match team.yaml name')
+  }
 
   const instructionsPath = join(root, 'instructions.md')
   if (existsSync(instructionsPath)) {
@@ -144,6 +170,7 @@ export function resolveTeamCheckout(root: string): TeamCheckout {
     name,
     root,
     manifestPath,
+    indexPath,
     instructionsPath: counts.instructions ? instructionsPath : null,
     filesPath: join(root, 'files'),
     skillsPath: join(root, 'skills'),
@@ -180,6 +207,8 @@ export function createTeamSource(options: CreateTeamSourceOptions = {}): TeamSou
   const root = teamCheckoutPath(home)
   const hasGitLfs = options.hasGitLfs ?? hasSystemGitLfs
   const stopPath = join(root, '.git', 'mim-sync-stop.json')
+  const receiptPath = join(root, '.git', 'mim-team-update.json')
+  let lastCheckedAt: string | null = null
 
   async function gitAvailable(): Promise<boolean> {
     return hasSystemGit()
@@ -200,13 +229,13 @@ export function createTeamSource(options: CreateTeamSourceOptions = {}): TeamSou
       lfsInstallAction: null,
     }
     if (!configured) {
-      return baseStatus('disconnected', null, root, git, 'Connect a Team source.')
+      return baseStatus('disconnected', null, root, git, 'Connect a Team.')
     }
     if (!existsSync(root)) {
-      return baseStatus('not-cloned', configured, root, git, 'The Team checkout is missing. Sync to clone it again.')
+      return baseStatus('not-cloned', configured, root, git, 'Restoring the local Team copy.')
     }
     if (!available) {
-      return baseStatus('stopped', configured, root, git, 'Git is required to inspect or sync the Team source.')
+      return baseStatus('stopped', configured, root, git, 'Git is required to check this Team.')
     }
 
     let team: TeamCheckout
@@ -276,6 +305,7 @@ export function createTeamSource(options: CreateTeamSourceOptions = {}): TeamSou
       : dirty || ahead > 0 || behind > 0
         ? 'needs-sync'
         : 'synced'
+    const update = await resolveUpdateStatus(root, team.name, lastCheckedAt, receiptPath)
 
     return {
       state,
@@ -289,19 +319,20 @@ export function createTeamSource(options: CreateTeamSourceOptions = {}): TeamSou
       conflicts,
       retryable: false,
       message: state === 'synced'
-        ? 'Synced.'
+        ? update.state === 'available' ? 'A Team update is available.' : 'Up to date.'
         : state === 'stopped'
-          ? 'Sync stopped because the Team checkout needs conflict resolution.'
-          : 'Team changes need to sync.',
+          ? 'Team changes need attention.'
+          : 'Your Team changes are waiting to be published.',
+      update,
     }
   }
 
   async function connect(repositoryValue: string): Promise<TeamSourceStatus> {
     const configured = repository()
-    if (configured) throw new Error('A Team source is already connected')
+    if (configured) throw new Error('A Team is already connected')
     const repositoryUrl = validateRepository(repositoryValue)
     if (!await gitAvailable()) {
-      throw new Error(`Git is required to connect a Team source. ${gitInstallAction(platform)}`)
+      throw new Error(`Git is required to connect a Team. ${gitInstallAction(platform)}`)
     }
     if (existsSync(root)) {
       throw new Error(`A Team checkout already exists at ${root}`)
@@ -319,7 +350,7 @@ export function createTeamSource(options: CreateTeamSourceOptions = {}): TeamSou
 
   async function open(): Promise<TeamCheckout> {
     const current = await status()
-    if (!current.repository) throw new Error('No Team source is connected')
+    if (!current.repository) throw new Error('No Team is connected')
     if (!current.team || current.state === 'invalid' || current.state === 'not-cloned') {
       throw new Error(current.message)
     }
@@ -327,11 +358,38 @@ export function createTeamSource(options: CreateTeamSourceOptions = {}): TeamSou
     return current.team
   }
 
-  async function sync(): Promise<TeamSourceStatus> {
+  async function check(): Promise<TeamSourceStatus> {
     const configured = repository()
-    if (!configured) throw new Error('No Team source is connected')
+    if (!configured) throw new Error('No Team is connected')
     if (!await gitAvailable()) {
-      throw new Error(`Git is required to sync the Team source. ${gitInstallAction(platform)}`)
+      throw new Error(`Git is required to check Team updates. ${gitInstallAction(platform)}`)
+    }
+    if (!existsSync(root)) {
+      await cloneAndValidate(configured)
+      return status()
+    }
+    try {
+      await gitExec(root, ['fetch', '--prune', 'origin'])
+      lastCheckedAt = new Date().toISOString()
+      return status()
+    } catch (error) {
+      const current = await status()
+      return {
+        ...current,
+        message: 'Could not check for Team updates. Your current Team still works.',
+        update: {
+          ...current.update,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      }
+    }
+  }
+
+  async function publish(): Promise<TeamSourceStatus> {
+    const configured = repository()
+    if (!configured) throw new Error('No Team is connected')
+    if (!await gitAvailable()) {
+      throw new Error(`Git is required to publish Team changes. ${gitInstallAction(platform)}`)
     }
     if (!existsSync(root)) {
       await cloneAndValidate(configured)
@@ -347,21 +405,88 @@ export function createTeamSource(options: CreateTeamSourceOptions = {}): TeamSou
     try {
       await gitExec(root, ['add', '-A'])
       const pending = await gitMaybe(root, ['status', '--short'])
-      if (pending.trim()) await gitExec(root, ['commit', '-m', 'Mim Team sync'])
+      if (pending.trim()) await gitExec(root, ['commit', '-m', 'Update Team content'])
+      await gitExec(root, ['fetch', '--prune', 'origin'])
+      lastCheckedAt = new Date().toISOString()
+      const divergence = await branchDivergence(root)
+      if (divergence.behind === 0 && divergence.ahead > 0) await gitExec(root, ['push'])
+    } catch (error) {
+      const retryable = isRetryableGitError(error)
+      if (retryable) {
+        const current = await status()
+        return {
+          ...current,
+          message: 'Your Team changes are saved here and will publish when the connection returns.',
+          retryable: true,
+        }
+      }
+      const current = await status()
+      return {
+        ...current,
+        state: 'stopped',
+        retryable: false,
+        message: error instanceof Error ? error.message : String(error),
+      }
+    }
+    return status()
+  }
+
+  async function update(): Promise<TeamSourceStatus> {
+    const configured = repository()
+    if (!configured) throw new Error('No Team is connected')
+    if (!await gitAvailable()) {
+      throw new Error(`Git is required to update the Team. ${gitInstallAction(platform)}`)
+    }
+    if (!existsSync(root)) {
+      await cloneAndValidate(configured)
+      return status()
+    }
+
+    clearSyncStop(stopPath)
+    const before = await status()
+    if (before.state === 'invalid') throw new Error(before.message)
+    if (before.git.lfsRequired && !before.git.lfsAvailable) throw new Error(before.message)
+    if (before.conflicts.length > 0) return before
+    const beforeRelease = readLocalRelease(root)
+
+    try {
+      await gitExec(root, ['add', '-A'])
+      const pending = await gitMaybe(root, ['status', '--short'])
+      if (pending.trim()) await gitExec(root, ['commit', '-m', 'Update Team content'])
+      await gitExec(root, ['fetch', '--prune', 'origin'])
+      lastCheckedAt = new Date().toISOString()
+      await requireValidRemoteRelease(root, before.team?.name ?? beforeRelease.team)
       await gitExec(root, ['pull', '--rebase'])
-      resolveTeamCheckout(root)
+      const updatedTeam = resolveTeamCheckout(root)
+      assertTeamReleaseContents(root, readLocalRelease(root))
+      if (updatedTeam.name !== beforeRelease.team) {
+        throw new Error('The installed Team identity changed unexpectedly.')
+      }
       await gitExec(root, ['push'])
+      const afterRelease = readLocalRelease(root)
+      const changes = compareTeamReleases(beforeRelease, afterRelease)
+      const revision = await gitMaybe(root, ['rev-parse', 'HEAD'])
+      if (changes.length > 0) {
+        writeFileSync(receiptPath, JSON.stringify({
+          revision,
+          appliedAt: new Date().toISOString(),
+          changes,
+        }), 'utf-8')
+      }
     } catch (error) {
       const preserved = await preserveRebaseConflicts(root, stopPath, 'Team')
       if (preserved) return status()
-      const retryable = isRetryableGitError(error)
-      if (retryable) {
-        writeSyncStop(stopPath, {
-          message: 'Team sync paused while the remote is unavailable. Mim will retry automatically.',
-          conflicts: [],
+      if (isRetryableGitError(error)) {
+        const current = await status()
+        return {
+          ...current,
+          message: 'The Team update will be ready when the connection returns.',
           retryable: true,
-        })
-        return status()
+          update: {
+            ...current.update,
+            error: error instanceof Error ? error.message : String(error),
+          },
+        }
       }
       const current = await status()
       return {
@@ -383,7 +508,11 @@ export function createTeamSource(options: CreateTeamSourceOptions = {}): TeamSou
       await gitExec(undefined, ['clone', '--', repositoryUrl, clonePath], {
         GIT_LFS_SKIP_SMUDGE: '1',
       })
-      resolveTeamCheckout(clonePath)
+      const clonedTeam = resolveTeamCheckout(clonePath)
+      assertTeamReleaseContents(clonePath, readLocalRelease(clonePath))
+      if (clonedTeam.name !== readLocalRelease(clonePath).team) {
+        throw new Error('The Team identity does not match its release.')
+      }
       if (repositoryUsesGitLfs(clonePath)) {
         if (!await hasGitLfs()) {
           throw new Error(`Git LFS is required. ${gitLfsInstallAction(platform)}`)
@@ -396,7 +525,112 @@ export function createTeamSource(options: CreateTeamSourceOptions = {}): TeamSou
     }
   }
 
-  return { status, connect, open, sync }
+  return { status, connect, open, check, publish, update }
+}
+
+async function resolveUpdateStatus(
+  root: string,
+  teamName: string,
+  checkedAt: string | null,
+  receiptPath: string,
+): Promise<TeamSourceStatus['update']> {
+  const local = readLocalRelease(root)
+  try {
+    const remote = await readRemoteRelease(root)
+    if (!remote) return { state: 'unknown', changes: [], checkedAt }
+    if (remote.index.team !== teamName) {
+      throw new Error('The available Team update belongs to a different Team.')
+    }
+    const changes = compareTeamReleases(local, remote.index)
+    if (changes.length > 0) {
+      return {
+        state: 'available',
+        changes,
+        checkedAt,
+        availableRevision: remote.revision,
+      }
+    }
+    const receipt = readReceipt(receiptPath)
+    return {
+      state: 'current',
+      changes: [],
+      checkedAt,
+      ...(receipt
+        ? { appliedAt: receipt.appliedAt, recentChanges: receipt.changes }
+        : {}),
+    }
+  } catch (error) {
+    return {
+      state: 'unknown',
+      changes: [],
+      checkedAt,
+      error: error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
+function readLocalRelease(root: string): TeamReleaseIndex {
+  return parseTeamRelease(readFileSync(join(root, 'team-index.json'), 'utf-8'))
+}
+
+async function readRemoteRelease(root: string): Promise<{
+  index: TeamReleaseIndex
+  revision: string
+} | null> {
+  const upstream = await gitMaybe(root, ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'])
+  if (!upstream) return null
+  const source = await gitMaybe(root, ['show', `${upstream}:team-index.json`])
+  if (!source) return null
+  return {
+    index: parseTeamRelease(source),
+    revision: await gitMaybe(root, ['rev-parse', upstream]),
+  }
+}
+
+async function requireValidRemoteRelease(root: string, teamName: string): Promise<void> {
+  const remote = await readRemoteRelease(root)
+  if (!remote) throw new Error('The Team repository has no published update index.')
+  if (remote.index.team !== teamName) {
+    throw new Error('The available Team update belongs to a different Team.')
+  }
+  const parent = mkdtempSync(join(root, '..', 'team-release-'))
+  const checkout = join(parent, 'checkout')
+  try {
+    await gitExec(root, ['worktree', 'add', '--detach', checkout, remote.revision])
+    const team = resolveTeamCheckout(checkout)
+    if (team.name !== teamName) {
+      throw new Error('The available Team update belongs to a different Team.')
+    }
+    assertTeamReleaseContents(checkout, remote.index)
+  } finally {
+    await gitExec(root, ['worktree', 'remove', '--force', checkout]).catch(() => {})
+    rmSync(parent, { recursive: true, force: true })
+  }
+}
+
+async function branchDivergence(root: string): Promise<{ ahead: number; behind: number }> {
+  const value = await gitMaybe(root, ['rev-list', '--left-right', '--count', 'HEAD...@{u}'])
+  const [ahead = 0, behind = 0] = value.split(/\s+/).map(Number)
+  return {
+    ahead: Number.isFinite(ahead) ? ahead : 0,
+    behind: Number.isFinite(behind) ? behind : 0,
+  }
+}
+
+function readReceipt(path: string): {
+  appliedAt: string
+  changes: TeamReleaseChange[]
+} | null {
+  try {
+    const value = JSON.parse(readFileSync(path, 'utf-8')) as {
+      appliedAt?: unknown
+      changes?: unknown
+    }
+    if (typeof value.appliedAt !== 'string' || !Array.isArray(value.changes)) return null
+    return { appliedAt: value.appliedAt, changes: value.changes as TeamReleaseChange[] }
+  } catch {
+    return null
+  }
 }
 
 function requireRegularFile(path: string, message: string): void {
@@ -472,5 +706,10 @@ function baseStatus(
     conflicts: [],
     retryable: false,
     message,
+    update: {
+      state: 'unknown',
+      changes: [],
+      checkedAt: null,
+    },
   }
 }

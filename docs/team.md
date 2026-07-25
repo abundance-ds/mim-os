@@ -1,192 +1,165 @@
-# Team Source
+# Team
 
-A Team source is one ordinary Git repository that gives every Project the same
-shared files, instructions, skills, apps, and routines. Each Mim installation
-can connect to at most one Team source. The connection belongs to the person
-using Mim, not to the open Project.
+A Team is an optional company repository. It can supply shared files,
+instructions, skills, apps, and routines to one Mim installation. A person who
+does not connect a Team has no Team folder and loses no core functionality.
 
-Connecting a Team does not move, merge, or delete Project files. For example,
-`issues/` and `knowledge/` remain in the Project that owns them. The Team
-repository supplies the app code that reads those folders; it does not become
-their data store.
+Each Team repository is authoritative only for that company. `mim-team` is
+authoritative for the connected Team on the maintainer's installation; it is
+not authoritative for `mim-os` or for every Mim user. Another company creates
+and owns a separate repository if it wants this capability.
 
-## Set up an existing Team
+Connecting a Team never moves or deletes Project data. An app may read
+Project-owned `issues/` or `knowledge/`, but its shared code remains in the
+Team repository.
 
-Before opening Mim, make sure the repository works with normal system Git:
+## User journey
 
-```bash
-git ls-remote https://github.com/organisation/team.git
-```
-
-SSH works too:
-
-```bash
-git ls-remote git@github.com:organisation/team.git
-```
-
-For a private HTTPS repository, configure the operating system's Git credential
-helper first. Do not put a username, password, or token in the URL.
-
-Then:
+To connect:
 
 1. Open **Settings > Team**.
-2. Paste the credential-free HTTPS or SSH repository location.
-3. Select **Connect Team source**.
-4. Wait for the Team name and contribution summary to appear.
-5. Open **Settings > Apps & agents** to review and enable the apps you want in
-   the current Project.
+2. Paste the credential-free link supplied by the company.
+3. Select **Connect Team**.
+4. Confirm the Team says **Up to date**.
 
-Connecting makes Team apps *available*. It deliberately does not enable them or
-grant their permissions. App activation is Personal and Project-local, so two
-people can use different Team apps without changing the Team repository.
+Mim checks quietly. The normal states are:
 
-The private Mim Team source created for this project can be connected with:
+- **Up to date** — the installed Team release is current.
+- **Update available** — Mim lists recognizable apps, skills, routines, files,
+  and guidance that changed.
+- **Updating** — the chosen release is being installed as one Git revision.
+- **Updated** — the release is installed.
+- **Needs attention** — Mim preserved a conflict or found invalid content.
+
+There is no manual collaboration-sync control in the Team UI. Repository and
+folder information lives under **Developer details**. When an update is
+available, the only primary action is **Update**.
+
+Team apps become available but do not silently run. Each person reviews and
+enables apps per Project. If an updated app requests additional access, the
+release summary flags it and the existing app grant no longer authorizes the
+expanded access. Permission reductions do not require a second review.
+
+## Repository contract
 
 ```text
-https://github.com/shoulders-ai/mim-team.git
+team.yaml             # required Team identity
+team-index.json        # required generated release index
+instructions.md       # optional guidance for every Project
+files/                # optional shared, writable files
+skills/<name>/
+  SKILL.md             # version required in frontmatter
+apps/<id>/
+  package.json         # version required
+routines/              # optional shared routine definitions
 ```
 
-## Create a Team repository
-
-A minimal Team repository looks like this:
-
-```text
-team.yaml
-files/
-skills/
-apps/
-```
-
-Only `team.yaml` is required:
+`team.yaml` contains a non-empty name:
 
 ```yaml
 name: My Team
 ```
 
-Git does not retain empty directories. Add an empty `.gitkeep` when the Team
-should begin with an empty Files folder:
+Contribution directories must be real directories, not symlinks. An absent
+optional directory contributes nothing. Skill names and app ids match their
+folder names.
 
-```bash
-mkdir -p files skills apps
-touch files/.gitkeep
-git add team.yaml files/.gitkeep
-git commit -m "Create Team source"
-git push
-```
+`team-index.json` is the release boundary. It records the Team identity,
+released app and skill versions, content digests, executable app surfaces, app
+permissions, and the shared routine/file/instruction set. Before changing the
+installed checkout, Mim opens the remote revision separately and verifies that
+the complete content matches the index.
 
-The complete fixed contract is:
+## Team repository workflow
 
-```text
-team.yaml             # required Team identity
-instructions.md       # optional instructions for every Project
-files/                # optional shared, writable files
-skills/<name>/        # optional standalone Team skills
-  SKILL.md
-apps/<id>/             # optional Team apps
-  package.json
-routines/              # optional Team routine definitions
-```
+The Team repository owns its apps and skills. It does not promote them from a
+global primary-app repository.
 
-`team.yaml` must define a non-empty `name`. When present,
-`instructions.md` must be a regular file, and each contribution location must
-be a real directory rather than a symlink. An absent optional directory simply
-contributes nothing.
+Its GitHub workflow:
 
-A standalone skill needs a `SKILL.md` whose frontmatter `name` matches its
-folder. An app needs a valid `package.json` directly under `apps/<id>/`. See
-[skills.md](skills.md) and [custom-apps.md](custom-apps.md) for those contracts.
+1. validates the fixed Team contract;
+2. runs every Team and app test;
+3. verifies indexed Team apps against the current Mim runtime;
+4. rejects version regressions;
+5. patch-bumps changed app or skill content when the contributor did not
+   provide a higher version;
+6. writes one deterministic `team-index.json`;
+7. commits the versions and index only after all checks pass.
 
-## What appears where
+Pull requests validate without publishing. The generated release commit makes
+one remote Git revision the complete update.
 
-| Team content | Where it appears | Activation |
-| --- | --- | --- |
-| `files/` | Files, grouped under the Team's real name | Always available |
-| `instructions.md` | Composed into every chat after Mim instructions | Automatic |
-| `skills/` | Settings > Skills and Chat | Each person may disable a skill |
-| `apps/` | Settings > Apps & agents | Each person reviews and enables per Project |
-| `routines/` | Routines | Each machine reviews and activates independently |
+## Runtime ownership
 
-Project apps override Team apps with the same id. Team apps override Mim apps.
-Project skills override Personal skills, which override Team skills, which
-override Mim skills. App-bundled skills remain attached to their owning app.
-
-## Personal connection and checkout
-
-The repository location is stored as Personal state in `~/.mim/config.yaml`:
+The Personal connection lives in `~/.mim/config.yaml`:
 
 ```yaml
 team:
   repository: https://github.com/organisation/team.git
 ```
 
-The writable checkout lives at `~/.mim/team/`. Each open Project receives one
-managed mount:
-
-```text
-<project>/.mim/team  ->  ~/.mim/team
-```
-
-Only the Team's `files/` directory is exposed in Files and content search.
-Instructions, skills, apps, and routines use the same checkout internally but
-do not appear as extra file roots.
+The checkout lives at `~/.mim/team/`. Each Project receives a managed
+`.mim/team` link to that checkout. Only `files/` appears as an extra Files
+root; the other contribution kinds are loaded through their normal systems.
 
 Mim accepts credential-free HTTPS, SSH, and local Git repository locations.
-Plain HTTP is rejected. HTTPS URLs containing credentials are rejected. Team
-operations always use the system `git` binary so normal SSH keys and credential
-helpers remain the only authentication path; Mim never stores a separate Team
-token.
+It uses system Git, including the person's normal credential helper or SSH
+keys, and never stores a separate Team token. Git LFS is required only when
+the repository attributes request it.
 
-Git LFS is required only if a `.gitattributes` file requests `filter=lfs`.
-Mim checks this after cloning and reports a platform-specific setup action when
-Git LFS is missing.
+## Update engine and tools
 
-## Sync and safety
+`src/main/team/teamSource.ts` owns the connection and Git checkout.
+`teamRelease.ts` parses and compares releases; `teamReleaseContents.ts`
+rebuilds and verifies content digests and access declarations. `teamFiles.ts`
+manages the safe Project mount. `liveTeamRefresh.ts` refreshes apps, tools,
+routines, and mounted files after connection or an accepted update.
 
-The `team.status`, `team.connect`, `team.open`, and `team.sync` tools share one
-Team-source instance:
+The tool surface is:
 
-- `team.status` reports connection, contract, Git state, and contributions
-  without fetching.
-- `team.connect` clones into a temporary directory, validates the contract, and
-  persists the connection only after validation succeeds.
-- `team.open` returns the validated fixed paths.
-- `team.sync` stages Team changes, commits them as `Mim Team sync`, rebases,
-  validates the pulled contract, and pushes.
+- `team.status` — read installed state without network access;
+- `team.connect` — clone and validate one Team;
+- `team.open` — resolve its validated paths;
+- `team.check` — fetch metadata and report an available update without
+  changing installed content;
+- `team.update` — validate and install the selected Team release.
 
-The desktop syncs on Project open, after Team mutations, and before quit.
-Connecting or syncing touches the Team checkout only. Project files and
-Project-local state under `<project>/.mim/` are not staged into Team Git.
+Local edits made to the writable Team checkout are committed and published in
+the background when possible. Remote content is never applied by that
+background publishing path. Mim checks for a remote release on open,
+periodically while running, and when Team settings opens, then waits for the
+person to choose **Update**.
 
-Offline failures pause and retry. If both sides edit the same Team path, Mim
-keeps the local working path and writes timestamped `conflict-local` and
-`conflict-remote` sibling copies. Automatic retries stop until a person keeps
-the desired content and selects **Sync now**.
+Offline checks leave the installed Team working. If local and remote edits
+conflict, Mim preserves `conflict-local` and `conflict-remote` sibling copies
+and stops. A person keeps the intended content in the Team folder and tries
+the update again; Mim never silently chooses a version.
 
-`src/main/team/teamSource.ts` is the sole contract resolver.
-`src/main/team/teamFiles.ts` owns the safe Project mount. It creates,
-retargets, or removes only the `.mim/team` symlink or junction and never
-replaces a real path at that location.
+## Content precedence
+
+| Team content | Where it appears | Activation |
+| --- | --- | --- |
+| `files/` | Files under the Team name | Always available |
+| `instructions.md` | Every chat after Mim instructions | Automatic |
+| `skills/` | Settings > Skills and Chat | Each person may disable |
+| `apps/` | Settings > Apps & agents | Review and enable per Project |
+| `routines/` | Routines | Review and activate per machine |
+
+Project apps override Team apps with the same id; Team apps override Mim apps.
+Project skills override Personal skills, which override Team skills, which
+override Mim skills.
 
 ## Troubleshooting
 
-**The Team connects, but no app launcher appears.** Open
-**Settings > Apps & agents**. Available apps do not appear in the Navigator
-until you review their permissions and enable them for this Project. Headless
-apps with no view never receive a Navigator launcher.
+**Mim cannot connect.** Run `git ls-remote <repository>` with the same link and
+fix the system Git credentials until it succeeds.
 
-**No Team apps appear in Settings.** Select **Sync now**, then reload the app
-catalog with **Refresh apps** in Settings > Apps & agents. Inspect Developer
-details for manifest diagnostics. Apps must be direct children of `apps/`, and
-each child needs a valid `package.json`.
+**No Team app appears.** Confirm the Team says **Up to date**, then select
+**Refresh apps** in Settings > Apps & agents. Apps must be direct children of
+`apps/` with a valid manifest and an entry in `team-index.json`.
 
-**A private repository cannot clone.** Run `git ls-remote <repository>` in a
-terminal. Fix the system Git credential helper or SSH key until that succeeds;
-Mim uses the same credentials.
+**An app has no launcher.** Enable it in Settings > Apps & agents. A headless
+app has no launcher even when enabled.
 
-**Files are missing from the Team section.** Team Files come only from
-`files/`. Files beside `team.yaml` or inside `apps/` are not shown in the Files
-surface.
-
-**Board or Knowledge looks empty.** Confirm the intended Project is open.
-Those apps read that Project's `issues/` and `knowledge/` directories; Team
-sync does not copy Project data between Projects.
+**An update needs attention.** Open **Developer details**, open the Team folder,
+and resolve the preserved copies explicitly before trying again.

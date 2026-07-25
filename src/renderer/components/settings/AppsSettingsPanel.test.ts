@@ -74,6 +74,15 @@ describe('Apps & agents direct sources', () => {
     expect(root.querySelector('[data-testid="app-origin-local"]')?.textContent).toBe('Acme Proposal')
   })
 
+  it('describes Team ownership without exposing sync mechanics', async () => {
+    await settle()
+    root.querySelector<HTMLButtonElement>('[data-testid="apps-row-shared"]')?.click()
+    await nextTick()
+
+    expect(root.textContent).toContain('Managed by Shoulders')
+    expect(root.textContent).not.toContain('Updates with Shoulders sync')
+  })
+
   it('uses only direct-source app tools', async () => {
     await settle()
     expect(call.mock.calls.some(([tool]) => String(tool).startsWith('registry.'))).toBe(false)

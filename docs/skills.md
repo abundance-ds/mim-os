@@ -92,7 +92,7 @@ explicitly unlocks the mutation tools:
   atomically; stale revisions fail so the agent must reload and reconcile.
 - `skill.update` cannot mutate Mim, Team, Project, or app-provided skills.
 
-The `mim` Team source's `build-email-voice` skill uses this path to distill a
+The connected `mim` Team's `build-email-voice` skill uses this path to distill a
 bounded sample of sent Gmail into one Personal `email-voice` skill. It stores
 guidance, not a mail corpus, never sends email, and requires the generated
 skill to evaluate every relevant drafting interaction for durable learning.

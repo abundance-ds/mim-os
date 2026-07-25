@@ -79,4 +79,40 @@ describe('per-person, per-Project app activation', () => {
     store.setEnabled('team-tui', true)
     expect(store.isEnabled(tuiApp)).toBe(true)
   })
+
+  it('stores the exact access that was reviewed instead of trusting every future version', () => {
+    const store = createPackageEnablementStore({ getWorkspacePath: () => project })
+    const teamApp = app('team-code', 'team', true)
+    teamApp.manifest.permissions = {
+      workspace: { read: true },
+      http: ['api.example.com'],
+    }
+
+    store.ackTrust(teamApp)
+
+    expect(JSON.parse(readFileSync(
+      join(project, '.mim', 'packages', 'enabled.json'),
+      'utf-8',
+    )).trusted).toEqual([{
+      id: 'team-code',
+      grants: ['code.backend', 'http:api.example.com', 'workspace.read'],
+    }])
+  })
+
+  it('asks for review again only when an updated app expands its access', () => {
+    const store = createPackageEnablementStore({ getWorkspacePath: () => project })
+    const teamApp = app('team-code', 'team', true)
+    teamApp.manifest.permissions = { workspace: { read: true } }
+    store.ackTrust(teamApp)
+    store.setEnabled('team-code', true)
+
+    const reduced = app('team-code', 'team', true)
+    expect(store.needsTrust(reduced)).toBe(false)
+    expect(store.isEnabled(reduced)).toBe(true)
+
+    const expanded = app('team-code', 'team', true)
+    expanded.manifest.permissions = { workspace: { read: true, write: true } }
+    expect(store.needsTrust(expanded)).toBe(true)
+    expect(store.isEnabled(expanded)).toBe(false)
+  })
 })

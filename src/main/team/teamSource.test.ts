@@ -18,6 +18,7 @@ import {
   resolveTeamCheckout,
   teamCheckoutPath,
 } from '@main/team/teamSource.js'
+import { buildTeamReleaseIndex } from '@main/team/teamReleaseContents.js'
 
 function git(args: string[], cwd?: string): string {
   return execFileSync('git', args, {
@@ -43,12 +44,18 @@ function seedRemote(root: string, options: { lfs?: boolean } = {}): string {
     mkdirSync(join(source, dir))
     writeFileSync(join(source, dir, '.gitkeep'), '')
   }
+  writeTeamIndex(source)
   git(['add', '-A'], source)
   git(['commit', '-m', 'Seed Team'], source)
   git(['init', '--bare', '--initial-branch=main', remote])
   git(['remote', 'add', 'origin', remote], source)
   git(['push', '-u', 'origin', 'main'], source)
   return remote
+}
+
+function writeTeamIndex(root: string): void {
+  const index = buildTeamReleaseIndex(root, 'Shoulders')
+  writeFileSync(join(root, 'team-index.json'), `${JSON.stringify(index, null, 2)}\n`)
 }
 
 function configureIdentity(checkout: string): void {
@@ -73,11 +80,13 @@ describe('Team source contract', () => {
     const checkout = join(root, 'checkout')
     mkdirSync(checkout)
     writeFileSync(join(checkout, 'team.yaml'), 'name: Shoulders\n')
+    writeTeamIndex(checkout)
 
     expect(resolveTeamCheckout(checkout)).toEqual({
       name: 'Shoulders',
       root: checkout,
       manifestPath: join(checkout, 'team.yaml'),
+      indexPath: join(checkout, 'team-index.json'),
       instructionsPath: null,
       filesPath: join(checkout, 'files'),
       skillsPath: join(checkout, 'skills'),
@@ -97,6 +106,7 @@ describe('Team source contract', () => {
     const checkout = join(root, 'checkout')
     mkdirSync(checkout)
     writeFileSync(join(checkout, 'team.yaml'), 'name: Shoulders\n')
+    writeTeamIndex(checkout)
     writeFileSync(join(checkout, 'instructions.md'), '# Shared instructions\n')
     for (const dir of ['files', 'skills', 'apps', 'routines']) mkdirSync(join(checkout, dir))
     writeFileSync(join(checkout, 'files', 'template.md'), 'Template')
@@ -129,6 +139,9 @@ describe('Team source contract', () => {
 
     writeFileSync(join(checkout, 'team.yaml'), 'name: "   "\n')
     expect(() => resolveTeamCheckout(checkout)).toThrow('non-empty name')
+
+    writeFileSync(join(checkout, 'team.yaml'), 'name: Shoulders\n')
+    expect(() => resolveTeamCheckout(checkout)).toThrow('team-index.json')
   })
 
   it('detects Git LFS only when repository attributes request its filter', () => {
@@ -142,7 +155,7 @@ describe('Team source contract', () => {
   })
 })
 
-describe('Team source connection and sync', () => {
+describe('Team connection and updates', () => {
   let root: string
 
   beforeEach(() => {
@@ -184,6 +197,7 @@ describe('Team source connection and sync', () => {
       dirty: false,
       ahead: 0,
       behind: 0,
+      update: { state: 'current', changes: [] },
     })
     expect(connected.root).toBe(teamCheckoutPath(home))
     expect(readFileSync(join(home, '.mim', 'config.yaml'), 'utf-8')).toContain(`repository: ${remote}`)
@@ -214,7 +228,7 @@ describe('Team source connection and sync', () => {
     expect(existsSync(join(home, '.mim', 'config.yaml'))).toBe(false)
   })
 
-  it('uses system Git for both clients and synchronizes writable Team changes end to end', async () => {
+  it('publishes local Team edits and applies remote Team updates only when requested', async () => {
     const remote = seedRemote(root)
     const homeA = join(root, 'home-a')
     const homeB = join(root, 'home-b')
@@ -228,16 +242,102 @@ describe('Team source connection and sync', () => {
     configureIdentity(teamCheckoutPath(homeB))
 
     writeFileSync(join(teamCheckoutPath(homeA), 'files', 'brief.md'), 'Version A\n')
+    writeTeamIndex(teamCheckoutPath(homeA))
     await expect(clientA.status()).resolves.toMatchObject({ state: 'needs-sync', dirty: true })
-    await expect(clientA.sync()).resolves.toMatchObject({ state: 'synced', dirty: false })
+    await expect(clientA.publish()).resolves.toMatchObject({ dirty: false })
 
-    await clientB.sync()
+    await expect(clientB.check()).resolves.toMatchObject({
+      update: {
+        state: 'available',
+        changes: [{ kind: 'file', id: 'brief.md', action: 'added' }],
+      },
+    })
+    expect(existsSync(join(teamCheckoutPath(homeB), 'files', 'brief.md'))).toBe(false)
+    await clientB.update()
     expect(readFileSync(join(teamCheckoutPath(homeB), 'files', 'brief.md'), 'utf-8')).toBe('Version A\n')
 
     writeFileSync(join(teamCheckoutPath(homeB), 'files', 'brief.md'), 'Version B\n')
-    await clientB.sync()
-    await clientA.sync()
+    writeTeamIndex(teamCheckoutPath(homeB))
+    await clientB.publish()
+    await clientA.check()
+    await clientA.update()
     expect(readFileSync(join(teamCheckoutPath(homeA), 'files', 'brief.md'), 'utf-8')).toBe('Version B\n')
+  })
+
+  it('discovers an app update without changing installed code, then records the applied change', async () => {
+    const remote = seedRemote(root)
+    const home = join(root, 'home')
+    mkdirSync(home)
+    const client = createTeamSource({ homeDir: home })
+    await client.connect(remote)
+    configureIdentity(teamCheckoutPath(home))
+
+    const source = join(root, 'source')
+    mkdirSync(join(source, 'apps', 'knowledge'), { recursive: true })
+    writeFileSync(join(source, 'apps', 'knowledge', 'package.json'), JSON.stringify({
+      name: '@test/knowledge',
+      version: '1.0.0',
+      mim: { manifestVersion: 1, id: 'knowledge', name: 'Knowledge', views: [], permissions: {} },
+    }))
+    writeTeamIndex(source)
+    git(['add', '-A'], source)
+    git(['commit', '-m', 'Publish Knowledge'], source)
+    git(['push'], source)
+
+    const available = await client.check()
+    expect(available.update).toMatchObject({
+      state: 'available',
+      changes: [{
+        kind: 'app',
+        id: 'knowledge',
+        name: 'Knowledge',
+        action: 'added',
+        nextVersion: '1.0.0',
+      }],
+    })
+    expect(existsSync(join(teamCheckoutPath(home), 'apps', 'knowledge'))).toBe(false)
+
+    const updated = await client.update()
+    expect(existsSync(join(teamCheckoutPath(home), 'apps', 'knowledge', 'package.json'))).toBe(true)
+    expect(updated.update).toMatchObject({
+      state: 'current',
+      changes: [],
+      recentChanges: [{ kind: 'app', id: 'knowledge', action: 'added' }],
+    })
+  })
+
+  it('refuses a remote release whose index does not match its app content', async () => {
+    const remote = seedRemote(root)
+    const home = join(root, 'home')
+    mkdirSync(home)
+    const client = createTeamSource({ homeDir: home })
+    await client.connect(remote)
+    configureIdentity(teamCheckoutPath(home))
+
+    const source = join(root, 'source')
+    mkdirSync(join(source, 'apps', 'knowledge'), { recursive: true })
+    writeFileSync(join(source, 'apps', 'knowledge', 'package.json'), JSON.stringify({
+      name: '@test/knowledge',
+      version: '1.0.0',
+      mim: { manifestVersion: 1, id: 'knowledge', name: 'Knowledge', views: [], permissions: {} },
+    }))
+    writeTeamIndex(source)
+    const indexPath = join(source, 'team-index.json')
+    const index = JSON.parse(readFileSync(indexPath, 'utf-8'))
+    index.apps[0].digest = 'f'.repeat(64)
+    writeFileSync(indexPath, JSON.stringify(index, null, 2))
+    git(['add', '-A'], source)
+    git(['commit', '-m', 'Publish invalid Knowledge release'], source)
+    git(['push'], source)
+
+    await expect(client.check()).resolves.toMatchObject({
+      update: { state: 'available' },
+    })
+    await expect(client.update()).resolves.toMatchObject({
+      state: 'stopped',
+      message: expect.stringContaining('does not match'),
+    })
+    expect(existsSync(join(teamCheckoutPath(home), 'apps', 'knowledge'))).toBe(false)
   })
 
   it('preserves both Team versions when two clients edit the same file', async () => {
@@ -256,13 +356,18 @@ describe('Team source connection and sync', () => {
     const pathA = join(teamCheckoutPath(homeA), 'files', 'brief.md')
     const pathB = join(teamCheckoutPath(homeB), 'files', 'brief.md')
     writeFileSync(pathA, 'baseline\n')
-    await clientA.sync()
-    await clientB.sync()
+    writeTeamIndex(teamCheckoutPath(homeA))
+    await clientA.publish()
+    await clientB.check()
+    await clientB.update()
 
     writeFileSync(pathA, 'client A\n')
     writeFileSync(pathB, 'client B\n')
-    await clientA.sync()
-    const stopped = await clientB.sync()
+    writeTeamIndex(teamCheckoutPath(homeA))
+    writeTeamIndex(teamCheckoutPath(homeB))
+    await clientA.publish()
+    await clientB.check()
+    const stopped = await clientB.update()
 
     expect(stopped).toMatchObject({ state: 'stopped', retryable: false })
     expect(stopped.message).toContain('preserved')
@@ -272,7 +377,7 @@ describe('Team source connection and sync', () => {
     expect(copies.map(name => readFileSync(join(teamCheckoutPath(homeB), 'files', name), 'utf-8')).sort())
       .toEqual(['client A\n', 'client B\n'])
     expect(readFileSync(pathB, 'utf-8')).toBe('client B\n')
-  })
+  }, 15_000)
 
   it('rejects HTTP repositories and credential-bearing URLs before invoking Git', async () => {
     const home = join(root, 'home')

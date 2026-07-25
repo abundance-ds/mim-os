@@ -105,7 +105,7 @@ export async function preserveRebaseConflicts(
   }
 
   return writeSyncStop(markerPath, {
-    message: `${label} sync paused. Mim preserved both versions as ${copies.join(' and ')}. Keep the version you want, then choose Sync now to retry.`,
+    message: `${label} update paused. Mim preserved both versions as ${copies.join(' and ')}. Keep the version you want, then try again.`,
     conflicts: copies,
     retryable: false,
   })

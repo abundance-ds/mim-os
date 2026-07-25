@@ -24,7 +24,8 @@ resource git mirrors also use the helper layer.
 
 The Personal Team connection is a credential-free repository location in
 `~/.mim/config.yaml`; its checkout is `~/.mim/team/`. Team clone, status, open,
-and sync all route through the resolver described in [team.md](team.md).
+check, publish, and update all route through the resolver described in
+[team.md](team.md).
 
 Unlike the legacy pull-only resource mirrors, Team Git requires the system
 `git` binary. Credential-free HTTPS, SSH, and local repository locations are
@@ -36,15 +37,15 @@ Git LFS is checked only when a Team repository's `.gitattributes` files request
 `filter=lfs`. Cloning defers LFS smudging, reports a platform-specific install
 action if the capability is missing, and runs `git lfs pull` when available.
 
-Team sync stages writable source changes, commits them as `Mim Team sync`,
-pulls with rebase, validates the fixed Team contract, and pushes. Mim runs this
-workflow in the background on Project open, after file mutations, and before
-quit.
+Mim publishes writable local Team changes in the background. It fetches remote
+metadata but does not apply remote content automatically. A validated
+`team-index.json` lets Mim show one release summary; the person chooses
+**Update** to install the full remote revision.
 
 If both sides edit the same path, Mim captures the local and remote Git stages,
 aborts the rebase, restores the local working file, and writes
-`*.conflict-local-*` and `*.conflict-remote-*` sibling copies. Automatic sync
-stops until the person keeps the desired content and chooses **Sync now**.
+`*.conflict-local-*` and `*.conflict-remote-*` sibling copies. Updating stops
+until the person keeps the desired content and tries again.
 Neither version is silently selected or discarded.
 
 ## Workspace Git Tools
@@ -103,7 +104,7 @@ before quit. `sync.now` remains the explicit retry and manual escape hatch.
 
 Network failures produce a plain-language paused state and retry in the
 background. Non-retryable errors stop automatic sync. Same-file conflicts use
-the same sibling-copy preservation as Team sync and require an explicit retry.
+the same sibling-copy preservation as Team updates and require an explicit retry.
 The stop record is machine-local under `.mim/`.
 
 Managed configuration and every managed sync reassert `.mim/` in the workspace

@@ -167,9 +167,9 @@ behind the normal permission gate.
   basic metadata; package UIs should write dropped PDFs into the workspace
   first, then call this helper from backend jobs.
 - `documents.importMarkdown` and `documents.importMarkdown.formats` are kernel
-  tools for package jobs and internal workflows. The external Import to
-  Markdown package in shoulders-ai/mim-apps exposes the user-facing app/tool
-  for DOCX, XLSX/XLSM, BibTeX, and selectable-text PDF conversion.
+  tools for package jobs and internal workflows. A Team or Project may provide
+  an Import to Markdown app for DOCX, XLSX/XLSM, BibTeX, and selectable-text
+  PDF conversion.
 
 ## Tests
 

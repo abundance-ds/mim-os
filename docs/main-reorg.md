@@ -1,9 +1,9 @@
 # `src/main/` layout
 
 `src/main/` keeps Electron entrypoints and small singleton services at the root,
-and groups larger platform domains into subfolders. User-facing apps live
-outside this repo in `shoulders-ai/mim-apps`; core owns the package platform
-but not app-specific issue or knowledge models.
+and groups larger platform domains into subfolders. Core owns the app platform,
+while optional Team repositories and Projects own their app-specific issue,
+knowledge, and company workflow models.
 
 ## Root files
 

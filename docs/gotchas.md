@@ -237,7 +237,7 @@ makes the launcher appear after the loader rescans that origin.
 
 ## Package UI iframes can only load files under ui/
 
-`resolvePackageUiPath` (`src/main/server/server.ts`) serves package view files relative to the view's own directory and rejects any `..` escape. A package UI script therefore **cannot** `import '../shared/foo.mjs'` — shared package modules are reachable from the backend (plain ESM relative imports work there, the runtime loads `backend/index.mjs` via a `file://` URL) but not from view iframes. If UI and backend need the same logic, the UI keeps its own copy with a comment pointing at the shared module (see the slides package's `ui/index.html` `deckCapableModels` in shoulders-ai/mim-apps `packages/slides/`).
+`resolvePackageUiPath` (`src/main/server/server.ts`) serves package view files relative to the view's own directory and rejects any `..` escape. A package UI script therefore **cannot** `import '../shared/foo.mjs'` — shared package modules are reachable from the backend (plain ESM relative imports work there, the runtime loads `backend/index.mjs` via a `file://` URL) but not from view iframes. If UI and backend need the same logic, the UI keeps its own copy with a comment pointing at the shared module (for example, a Team-owned Slides app keeps view-safe model logic inside its own `ui/` directory).
 
 ## GUI Electron gets the launchd PATH on macOS; Windows uses where.exe
 

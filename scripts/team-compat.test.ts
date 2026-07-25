@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from 'fs'
 import { dirname, join, relative, resolve, sep } from 'path'
-import { homedir, tmpdir } from 'os'
+import { tmpdir } from 'os'
 import { pathToFileURL } from 'url'
 import { createTraceLog } from '@main/trace/trace.js'
 import { type HttpClient, type HttpResponse } from '@main/integrations/http.js'
@@ -26,8 +26,10 @@ import { registerPackageRuntimeTools } from '@main/tools/packageRuntime.js'
 import { registerFileTools } from '@main/tools/fs.js'
 import { registerDocumentTools } from '@main/tools/documents.js'
 import { registerReferencesTools } from '@main/tools/references.js'
+import { parseTeamRelease } from '@main/team/teamRelease.js'
+import { assertTeamReleaseContents } from '@main/team/teamReleaseContents.js'
 
-const runCompat = process.env.MIM_PACKAGE_COMPAT === '1'
+const runCompat = process.env.MIM_TEAM_COMPAT === '1'
 const describeCompat = runCompat ? describe : describe.skip
 
 interface PackageJson {
@@ -48,7 +50,7 @@ interface PackageJson {
 interface Harness {
   root: string
   workspacePath: string
-  packagesRoot: string
+  teamRoot: string
   selectedIds: string[]
   packageJsonById: Map<string, PackageJson>
   tools: ToolRegistry
@@ -60,32 +62,36 @@ interface Harness {
 
 let harness: Harness | null = null
 
-describeCompat('mim-apps compatibility', () => {
+describeCompat('Team app compatibility', () => {
   beforeAll(async () => {
-    const packagesRoot = resolvePackagesRoot()
-    if (!existsSync(packagesRoot)) {
-      throw new Error(`mim-apps clone not found: ${packagesRoot}. Set MIM_PACKAGES_DIR=/path/to/mim-apps.`)
+    const teamRoot = resolveTeamRoot()
+    if (!existsSync(teamRoot)) {
+      throw new Error(`Team repository not found: ${teamRoot}. Set MIM_TEAM_PATH=/path/to/team.`)
     }
+    assertTeamReleaseContents(
+      teamRoot,
+      parseTeamRelease(readFileSync(join(teamRoot, 'team-index.json'), 'utf-8')),
+    )
 
-    const sourcePackageDirs = discoverPackageDirs(packagesRoot)
+    const sourcePackageDirs = discoverPackageDirs(teamRoot)
     const selectedIds = selectedPackageIds(sourcePackageDirs.map(pkg => pkg.id))
     assertSelectedPackagesExist(sourcePackageDirs.map(pkg => pkg.id), selectedIds)
 
-    const root = mkdtempSync(join(tmpdir(), 'mim-package-compat-'))
+    const root = mkdtempSync(join(tmpdir(), 'mim-team-compat-'))
     const workspace = join(root, 'workspace')
-    const mimDir = join(root, 'mim-apps')
+    const mimDir = join(root, 'mim-built-ins')
     const teamDir = join(root, 'team-apps')
     mkdirSync(workspace, { recursive: true })
     mkdirSync(mimDir, { recursive: true })
     mkdirSync(teamDir, { recursive: true })
-    writeFileSync(join(workspace, 'mim.yaml'), 'name: package-compat\n')
+    writeFileSync(join(workspace, 'mim.yaml'), 'name: team-compat\n')
 
     const packageJsonById = new Map<string, PackageJson>()
     for (const id of selectedIds) {
-      const srcDir = join(packagesRoot, 'packages', id)
+      const srcDir = join(teamRoot, 'apps', id)
       const packageJson = readPackageJson(srcDir)
       requireString(packageJson.version, `${id} package version`)
-      const destDir = join(mimDir, id)
+      const destDir = join(teamDir, id)
       copyPackageDir(srcDir, destDir)
       packageJsonById.set(id, packageJson)
     }
@@ -129,6 +135,7 @@ describeCompat('mim-apps compatibility', () => {
     registerPackageRuntimeTools(tools, packages, runtime, jobs)
 
     for (const id of selectedIds) {
+      await tools.call('app.trust', { id }, { actor: 'user' })
       await tools.call('app.enable', { id, layer: 'local' }, { actor: 'user' })
     }
     await namedTools.sync()
@@ -136,7 +143,7 @@ describeCompat('mim-apps compatibility', () => {
     harness = {
       root,
       workspacePath: workspace,
-      packagesRoot,
+      teamRoot,
       selectedIds,
       packageJsonById,
       tools,
@@ -154,16 +161,15 @@ describeCompat('mim-apps compatibility', () => {
     harness = null
   })
 
-  it('uses every app published in the catalog index by default', () => {
+  it('uses every app published in the Team index by default', () => {
     const h = requireHarness()
     if (process.env.MIM_COMPAT_PACKAGES) return
 
-    const index = JSON.parse(readFileSync(join(h.packagesRoot, 'index.json'), 'utf-8')) as {
-      packages: Array<{ id: string; path: string }>
+    const index = JSON.parse(readFileSync(join(h.teamRoot, 'team-index.json'), 'utf-8')) as {
+      apps: Array<{ id: string }>
     }
-    const expected = index.packages
-      .filter(pkg => pkg.path === `packages/${pkg.id}`)
-      .map(pkg => pkg.id)
+    const expected = index.apps
+      .map(app => app.id)
       .sort()
 
     expect(h.selectedIds).toEqual(expected)
@@ -300,37 +306,30 @@ function requireHarness(): Harness {
   return harness
 }
 
-function resolvePackagesRoot(): string {
-  const raw = process.env.MIM_PACKAGES_DIR || join(homedir(), 'Desktop', 'mim-apps')
-  return resolve(expandHome(raw))
+function resolveTeamRoot(): string {
+  const raw = process.env.MIM_TEAM_PATH
+  if (!raw) throw new Error('Set MIM_TEAM_PATH=/path/to/team')
+  return resolve(raw)
 }
 
-function expandHome(path: string): string {
-  if (path === '~') return homedir()
-  if (path.startsWith(`~${sep}`)) return join(homedir(), path.slice(2))
-  return path
-}
-
-function discoverPackageDirs(packagesRoot: string): Array<{ id: string; dir: string }> {
-  const packagesDir = join(packagesRoot, 'packages')
-  if (!existsSync(packagesDir)) throw new Error(`packages directory not found: ${packagesDir}`)
-  const indexPath = join(packagesRoot, 'index.json')
-  if (!existsSync(indexPath)) throw new Error(`catalog index not found: ${indexPath}`)
+function discoverPackageDirs(teamRoot: string): Array<{ id: string; dir: string }> {
+  const packagesDir = join(teamRoot, 'apps')
+  if (!existsSync(packagesDir)) throw new Error(`apps directory not found: ${packagesDir}`)
+  const indexPath = join(teamRoot, 'team-index.json')
+  if (!existsSync(indexPath)) throw new Error(`Team index not found: ${indexPath}`)
   const index = JSON.parse(readFileSync(indexPath, 'utf-8')) as {
-    packages?: Array<{ id?: unknown; path?: unknown }>
+    apps?: Array<{ id?: unknown }>
   }
-  if (!Array.isArray(index.packages)) throw new Error(`catalog index has no packages array: ${indexPath}`)
+  if (!Array.isArray(index.apps)) throw new Error(`Team index has no apps array: ${indexPath}`)
 
-  return index.packages
-    .filter((pkg): pkg is { id: string; path: string } => (
-      typeof pkg.id === 'string' && pkg.path === `packages/${pkg.id}`
-    ))
-    .map(pkg => {
-      const dir = join(packagesDir, pkg.id)
+  return index.apps
+    .filter((app): app is { id: string } => typeof app.id === 'string')
+    .map(app => {
+      const dir = join(packagesDir, app.id)
       if (!existsSync(join(dir, 'package.json'))) {
-        throw new Error(`catalogued package is missing: ${pkg.id}`)
+        throw new Error(`indexed Team app is missing: ${app.id}`)
       }
-      return { id: pkg.id, dir }
+      return { id: app.id, dir }
     })
     .sort((a, b) => a.id.localeCompare(b.id))
 }
@@ -346,7 +345,7 @@ function assertSelectedPackagesExist(allIds: string[], selectedIds: string[]): v
   const all = new Set(allIds)
   const missing = selectedIds.filter(id => !all.has(id))
   if (missing.length > 0) {
-    throw new Error(`MIM_COMPAT_PACKAGES selected missing package ids: ${missing.join(', ')}`)
+    throw new Error(`MIM_COMPAT_PACKAGES selected missing Team app ids: ${missing.join(', ')}`)
   }
 }
 

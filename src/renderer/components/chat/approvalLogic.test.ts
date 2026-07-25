@@ -78,7 +78,7 @@ describe('approval logic', () => {
     expect(approvalNote({ toolName: 'fs.write', pathKind: 'workspace' })).toBe('')
     expect(approvalNote({ toolName: 'fs.write', pathKind: 'sensitive' })).toContain('sensitive')
     expect(approvalNote({ toolName: 'fs.write', pathKind: 'outside-workspace' })).toContain('outside your workspace')
-    expect(approvalNote({ toolName: 'fs.write', pathKind: 'team' })).toContain('Team source')
+    expect(approvalNote({ toolName: 'fs.write', pathKind: 'team' })).toBe('This writes to your Team.')
     expect(approvalNote({
       toolName: 'web.read',
       savedBrowserSession: { domain: 'news.example', granted: false },

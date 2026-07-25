@@ -355,7 +355,7 @@ onBeforeUnmount(() => {
               <div class="flex flex-wrap gap-x-4 gap-y-1">
                 <span>Origin: {{ originLabel(row.source) }}</span>
                 <span v-if="row.version">Version {{ row.version }}</span>
-                <span>{{ row.source === 'team' ? `Updates with ${teamName} sync` : row.source === 'mim' ? 'Updates with Mim' : 'Updates with Project sync' }}</span>
+                <span>{{ row.source === 'team' ? `Managed by ${teamName}` : row.source === 'mim' ? 'Managed by Mim' : 'Managed by this Project' }}</span>
               </div>
               <div>
                 <span class="font-medium text-ink-2">Access</span>

@@ -1173,7 +1173,7 @@ describe('instruction and skill origin policy', () => {
 })
 
 describe('Team tool policies', () => {
-  it('classifies Team discovery separately from connection and network sync', () => {
+  it('classifies Team discovery separately from connection, checking, and updating', () => {
     expect(getToolPolicy('team.status')).toMatchObject({ category: 'read', risk: 'low' })
     expect(getToolPolicy('team.open')).toMatchObject({ category: 'read', risk: 'low' })
     expect(getToolPolicy('team.connect')).toMatchObject({
@@ -1181,13 +1181,14 @@ describe('Team tool policies', () => {
       risk: 'medium',
       targetParam: 'repository',
     })
-    expect(getToolPolicy('team.sync')).toMatchObject({ category: 'network', risk: 'medium' })
+    expect(getToolPolicy('team.check')).toMatchObject({ category: 'network', risk: 'medium' })
+    expect(getToolPolicy('team.update')).toMatchObject({ category: 'network', risk: 'medium' })
   })
 
   it('keeps the Team connection and checkout unavailable to apps', async () => {
     const permissions: PackagePermissions = { workspace: { read: true, write: true } }
     const { gate } = makeGate({ packagePermissions: permissions })
-    for (const name of ['team.status', 'team.open', 'team.connect', 'team.sync']) {
+    for (const name of ['team.status', 'team.open', 'team.connect', 'team.check', 'team.update']) {
       await expect(
         gate.check(tool(name), {}, { actor: 'package', package_id: 'p1' }),
       ).rejects.toThrow(PermissionDeniedError)

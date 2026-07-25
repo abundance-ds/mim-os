@@ -107,6 +107,19 @@ export function registerAppKernelEvents(
       const sessionId = isRecord(payload) ? payload.sessionId : undefined
       if (typeof sessionId === 'string') void deps.refreshSubagentSession(sessionId)
     }],
+    ['team:update-available', (payload: unknown) => {
+      const teamName = isRecord(payload) && typeof payload.teamName === 'string'
+        ? payload.teamName
+        : 'Your Team'
+      deps.pushToast({
+        kind: 'info',
+        message: `${teamName} has an update`,
+        detail: teamUpdateSummary(payload),
+        actionLabel: 'Review',
+        durationMs: null,
+        action: () => { deps.openSettings('team') },
+      })
+    }],
     ['app:update-available', (payload: unknown) => {
       const version = updateVersion(payload)
       deps.pushToast({
@@ -189,6 +202,16 @@ export function registerAppKernelEvents(
       kernel.off(channel, handler)
     }
   }
+}
+
+function teamUpdateSummary(payload: unknown): string | undefined {
+  if (!isRecord(payload) || !Array.isArray(payload.changes)) return undefined
+  const names = payload.changes
+    .map(change => isRecord(change) && typeof change.name === 'string' ? change.name : '')
+    .filter(Boolean)
+  if (names.length === 0) return undefined
+  if (names.length <= 3) return names.join(names.length === 2 ? ' and ' : ', ')
+  return `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

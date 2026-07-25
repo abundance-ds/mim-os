@@ -11,7 +11,8 @@ describe('Team tools', () => {
     status: ReturnType<typeof vi.fn>
     connect: ReturnType<typeof vi.fn>
     open: ReturnType<typeof vi.fn>
-    sync: ReturnType<typeof vi.fn>
+    check: ReturnType<typeof vi.fn>
+    update: ReturnType<typeof vi.fn>
   }
   let emit: ReturnType<typeof vi.fn>
   let onChanged: ReturnType<typeof vi.fn>
@@ -22,19 +23,30 @@ describe('Team tools', () => {
       status: vi.fn(async () => ({ state: 'disconnected' })),
       connect: vi.fn(async (repository: string) => ({ state: 'synced', repository })),
       open: vi.fn(async () => ({ name: 'Shoulders', root: '/home/.mim/team' })),
-      sync: vi.fn(async () => ({ state: 'synced' })),
+      check: vi.fn(async () => ({
+        state: 'needs-sync',
+        update: {
+          state: 'available',
+          changes: [{ kind: 'app', id: 'knowledge', name: 'Knowledge', action: 'updated' }],
+        },
+      })),
+      update: vi.fn(async () => ({
+        state: 'synced',
+        update: { state: 'current', changes: [], recentChanges: [] },
+      })),
     }
     emit = vi.fn()
     onChanged = vi.fn(async () => undefined)
     registerTeamTools(tools, { source, emit, onChanged })
   })
 
-  it('registers the single-source status, connect, open, and sync surface', () => {
+  it('registers the single-source status, connect, open, check, and update surface', () => {
     expect(tools.list().map(tool => tool.name)).toEqual([
       'team.status',
       'team.connect',
       'team.open',
-      'team.sync',
+      'team.check',
+      'team.update',
     ])
     for (const tool of tools.list()) expect(tool.inputSchema).toBeDefined()
   })
@@ -45,15 +57,26 @@ describe('Team tools', () => {
       .resolves.toEqual({ state: 'synced', repository: '/repos/team.git' })
     await expect(tools.call('team.open', {}, ctx))
       .resolves.toEqual({ team: { name: 'Shoulders', root: '/home/.mim/team' } })
-    await expect(tools.call('team.sync', {}, ctx)).resolves.toEqual({ state: 'synced' })
+    await expect(tools.call('team.check', {}, ctx)).resolves.toMatchObject({
+      update: { state: 'available' },
+    })
+    await tools.call('team.check', {}, ctx)
+    await expect(tools.call('team.update', {}, ctx)).resolves.toMatchObject({
+      update: { state: 'current' },
+    })
 
     expect(source.connect).toHaveBeenCalledWith('/repos/team.git')
     expect(source.status).toHaveBeenCalledOnce()
     expect(source.open).toHaveBeenCalledOnce()
-    expect(source.sync).toHaveBeenCalledOnce()
-    expect(emit).toHaveBeenCalledTimes(2)
+    expect(source.check).toHaveBeenCalledTimes(2)
+    expect(source.update).toHaveBeenCalledOnce()
+    expect(emit).toHaveBeenCalledTimes(3)
     expect(emit).toHaveBeenNthCalledWith(1, 'team:changed')
-    expect(emit).toHaveBeenNthCalledWith(2, 'team:changed')
+    expect(emit).toHaveBeenNthCalledWith(2, 'team:update-available', {
+      changes: [{ kind: 'app', id: 'knowledge', name: 'Knowledge', action: 'updated' }],
+      teamName: undefined,
+    })
+    expect(emit).toHaveBeenNthCalledWith(3, 'team:changed')
     expect(onChanged).toHaveBeenCalledTimes(2)
   })
 
@@ -61,5 +84,11 @@ describe('Team tools', () => {
     await expect(tools.call('team.connect', { repository: '   ' }, ctx))
       .rejects.toThrow('repository')
     expect(source.connect).not.toHaveBeenCalled()
+  })
+
+  it('checks quietly when the Team screen is already open', async () => {
+    await tools.call('team.check', { announce: false }, ctx)
+
+    expect(emit).not.toHaveBeenCalled()
   })
 })

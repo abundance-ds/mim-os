@@ -87,6 +87,7 @@ describe('app shell kernel events', () => {
       'package:job:event',
       'agent:session-event',
       'subagent:event',
+      'team:update-available',
       'app:update-available',
       'app:update-progress',
       'app:update-downloaded',
@@ -97,7 +98,7 @@ describe('app shell kernel events', () => {
 
     unregister()
 
-    expect(kernel.off).toHaveBeenCalledTimes(30)
+    expect(kernel.off).toHaveBeenCalledTimes(31)
     expect(registeredChannels()).toEqual([])
     expect(deps.refreshApps).not.toHaveBeenCalled()
   })
@@ -198,6 +199,30 @@ describe('app shell kernel events', () => {
     const toast = vi.mocked(deps.pushToast).mock.calls[0][0]
     await toast.action?.()
     expect(deps.downloadUpdate).toHaveBeenCalledOnce()
+  })
+
+  it('offers one plain-language route to review an available Team update', async () => {
+    const { deps, kernel, emit } = makeHarness()
+    registerAppKernelEvents(kernel, deps)
+
+    emit('team:update-available', {
+      teamName: 'Shoulders',
+      changes: [
+        { kind: 'app', name: 'Knowledge', action: 'updated' },
+        { kind: 'skill', name: 'Build App', action: 'updated' },
+      ],
+    })
+
+    expect(deps.pushToast).toHaveBeenCalledWith(expect.objectContaining({
+      kind: 'info',
+      message: 'Shoulders has an update',
+      detail: 'Knowledge and Build App',
+      actionLabel: 'Review',
+      durationMs: null,
+    }))
+    const toast = vi.mocked(deps.pushToast).mock.calls[0][0]
+    await toast.action?.()
+    expect(deps.openSettings).toHaveBeenCalledWith('team')
   })
 
   it('shows an error toast if a user-triggered update download fails', async () => {

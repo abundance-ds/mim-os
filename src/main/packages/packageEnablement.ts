@@ -6,7 +6,12 @@ import { atomicWriteJson } from '@main/atomicJson.js'
 interface EnablementFile {
   enabled?: string[]
   disabled?: string[]
-  trusted?: string[]
+  trusted?: TrustEntry[]
+}
+
+interface TrustEntry {
+  id: string
+  grants: string[]
 }
 
 export type EnablementPackage = Pick<LoadedPackage, 'manifest' | 'source' | 'dir'>
@@ -55,7 +60,10 @@ export function createPackageEnablementStore(options: {
       cachedState = {
         enabled: Array.isArray(raw.enabled) ? raw.enabled.filter(isPackageId) : [],
         disabled: Array.isArray(raw.disabled) ? raw.disabled.filter(isPackageId) : [],
-        trusted: Array.isArray(raw.trusted) ? raw.trusted.filter(isTrustEntry) : [],
+        trusted: Array.isArray(raw.trusted) ? raw.trusted.filter(isTrustEntry).map(entry => ({
+          id: entry.id,
+          grants: [...new Set(entry.grants)].sort(),
+        })) : [],
       }
     } catch (error) {
       cachedDiagnostics = [`Could not read app enablement file: ${(error as Error).message}`]
@@ -70,7 +78,9 @@ export function createPackageEnablementStore(options: {
     const clean = {
       enabled: [...new Set(state.enabled)].sort(),
       disabled: [...new Set(state.disabled)].sort(),
-      trusted: [...new Set(state.trusted)].sort(),
+      trusted: state.trusted
+        .map(entry => ({ id: entry.id, grants: [...new Set(entry.grants)].sort() }))
+        .sort((left, right) => left.id.localeCompare(right.id)),
     }
     atomicWriteJson(path, clean)
     cachedPath = path
@@ -90,7 +100,11 @@ export function createPackageEnablementStore(options: {
   }
 
   function isTrusted(pkg: EnablementPackage): boolean {
-    return load().trusted.includes(`${pkg.manifest.id}@*`)
+    if (!requiresTrust(pkg)) return true
+    const reviewed = load().trusted.find(entry => entry.id === pkg.manifest.id)
+    if (!reviewed) return false
+    const grants = new Set(reviewed.grants)
+    return requiredGrants(pkg).every(grant => grants.has(grant))
   }
 
   return {
@@ -135,7 +149,10 @@ export function createPackageEnablementStore(options: {
       save({
         enabled: state.enabled,
         disabled: state.disabled,
-        trusted: [...state.trusted.filter(entry => !entry.startsWith(`${id}@`)), `${id}@*`],
+        trusted: [
+          ...state.trusted.filter(entry => entry.id !== id),
+          { id, grants: requiredGrants(pkg) },
+        ],
       })
     },
     needsTrust(pkg) {
@@ -152,6 +169,22 @@ function isPackageId(value: unknown): value is string {
   return typeof value === 'string' && /^[a-z0-9][a-z0-9_-]{0,59}$/.test(value)
 }
 
-function isTrustEntry(value: unknown): value is string {
-  return typeof value === 'string' && /^[a-z0-9][a-z0-9_-]{0,59}@\*$/.test(value)
+function isTrustEntry(value: unknown): value is TrustEntry {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const entry = value as Record<string, unknown>
+  return isPackageId(entry.id)
+    && Array.isArray(entry.grants)
+    && entry.grants.every(grant => typeof grant === 'string' && grant.length > 0)
+}
+
+function requiredGrants(pkg: EnablementPackage): string[] {
+  const grants: string[] = []
+  if (pkg.manifest.backend !== undefined) grants.push('code.backend')
+  if (pkg.manifest.tui !== undefined) grants.push('code.tui')
+  if (pkg.manifest.permissions.workspace?.read === true) grants.push('workspace.read')
+  if (pkg.manifest.permissions.workspace?.write === true) grants.push('workspace.write')
+  if (pkg.manifest.permissions.ai === true) grants.push('ai')
+  for (const target of pkg.manifest.permissions.http ?? []) grants.push(`http:${target}`)
+  for (const secret of pkg.manifest.permissions.secrets ?? []) grants.push(`secret:${secret}`)
+  return [...new Set(grants)].sort()
 }

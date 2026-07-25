@@ -18,7 +18,7 @@ Never attempt to take screenshots via `screencapture`, `osascript`, or any other
 
 **TDD.** Tests are co-located: `foo.ts` tested by `foo.test.ts` in the same directory. Write the test file first with failing tests that describe the contract, then implement until they pass.
 
-**Testing rules.** Mock only at system boundaries (Electron IPC, AI SDK providers). Use real Pinia stores. No snapshot tests. Run: `npm run test`. The suite includes `src/**/*.test.ts` plus co-located `*.test.{ts,mjs}` under `sdk/` and `scripts/` (see `vitest.config.ts`). App tests run in `shoulders-ai/mim-apps`. To verify current Mim against the external app repo, run `npm run test:packages:compat`; it stages every app published in `mim-apps/index.json` into a temporary Mim-origin layout and exercises the real app loader/runtime, named-tool path, and app-root `compat.mjs` smoke hooks.
+**Testing rules.** Mock only at system boundaries (Electron IPC, AI SDK providers). Use real Pinia stores. No snapshot tests. Run: `npm run test`. The suite includes `src/**/*.test.ts` plus co-located `*.test.{ts,mjs}` under `sdk/` and `scripts/` (see `vitest.config.ts`). Each optional Team repository runs its own app tests. To verify a Team against current Mim, run `MIM_TEAM_PATH=/path/to/team npm run test:team:compat`; it stages every app published in `team-index.json` into a temporary Team layout and exercises the real app loader/runtime, named-tool path, and app-root `compat.mjs` smoke hooks.
 
 **Styles — TAILWIND ONLY.** All styling MUST use Tailwind v4 utility classes. Design tokens are defined in `src/renderer/styles.css` via `@theme`. Use the project's semantic classes: `text-ink-3`, `bg-chrome-mid`, `border-rule-light`, `bg-surface`, `text-accent`, etc.
 

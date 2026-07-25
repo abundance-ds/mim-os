@@ -14,7 +14,7 @@ Start here when changing the codebase. This is a navigation index, not a design 
 ```bash
 npm install && npm run build && npm run test
 npm run dev                        # launch app
-npm run test:packages:compat       # cross-repo app contract tests
+MIM_TEAM_PATH=../mim-team npm run test:team:compat
 ```
 
 ## Architecture Overview
@@ -73,7 +73,7 @@ Each entry is a one-liner with the source cluster and relevant docs. Read the li
 - **Routines.** Team and Project definitions resolved into one catalog with Project overrides; revision-aware create/edit/duplicate/Trash lifecycle; machine-local four-state activation, visible machine ownership, and run state under `.mim/routines/`; manual chat-turn runs; desktop and always-on schedule/file/webhook/Slack automation; isolated scheduled-run retry; source-file live refresh; authority review; routine session metadata; and the dense Routines work surface. `src/main/routines/`, `tools/routines.ts`, `server/server.ts`, `headless.ts`, `sessions.ts`, `src/renderer/components/routines/`, `src/renderer/stores/routines.ts`. Docs: [routines.md](routines.md), [design-system.md](design-system.md#617-routines-work-surface).
 - **Workspace.** Boot (restore last or create default), `mim.yaml` contract (schema, init detection, scaffold), scoped open-file watcher. `src/main/workspace/`. Docs: [git.md](git.md) for sync.
 - **Git tools.** Status/diff/log/commit/pull/push plus managed Project sync with Git/LFS preflight, open/save/quit lifecycle automation, offline retry, and conflict-copy preservation. `src/main/git.ts`, `src/main/sync/`, `tools/git.ts`, `tools/sync.ts`.
-- **Team source.** One Personal connection, deterministic `~/.mim/team/` checkout, fixed contribution contract, writable system-Git background sync, conflict-copy preservation, safe Project mount at `.mim/team`, and live refresh of apps/tools/routines after connection. `src/main/team/teamSource.ts`, `src/main/team/teamFiles.ts`, `src/main/team/liveTeamRefresh.ts`, `tools/team.ts`. Docs and simple setup: [team.md](team.md); Git behavior: [git.md](git.md).
+- **Team.** One optional Personal connection, deterministic `~/.mim/team/` checkout, required release index with full content-integrity verification, background update discovery without automatic installation, one accepted-update path, exact permission re-review, writable local publishing, conflict-copy preservation, safe Project mount at `.mim/team`, and live refresh after connection or update. `src/main/team/teamSource.ts`, `teamRelease.ts`, `teamReleaseContents.ts`, `teamFiles.ts`, `liveTeamRefresh.ts`, `tools/team.ts`. Docs: [team.md](team.md); Git behavior: [git.md](git.md).
 - **Personal config.** `~/.mim/config.yaml` (identity, appearance/editor/layout preferences, integration account defaults, model defaults, skill activation, and one credential-free Team repository). Never holds keys or tokens. `src/main/userConfig.ts`.
 - **Settings tools.** Route Personal preferences to `~/.mim/config.yaml` and current-Project runtime/tool state to `.mim/settings.json`; agent tool availability policy remains Project-local for Settings > Tools. `src/main/tools/settings.ts`, `src/main/tools/toolPolicy.ts`.
 - **Bridge tools.** Cross-surface messaging: `editor.open`, `terminal.run`, `chat.send`. `src/main/tools/bridge.ts`.
@@ -167,27 +167,20 @@ Each entry is a one-liner with the source cluster and relevant docs. Read the li
 - **Themes.** Light (white/parchment/glacier/sage) + dark (slate/monokai/nord/dracula) via `data-theme`. `src/renderer/styles.css`.
 - **Toast store.** Global error/info notifications. `src/renderer/stores/toasts.ts`, `components/ToastHost.vue`.
 
-### External App Compatibility Catalog (shoulders-ai/mim-apps)
+### Optional Team Repositories
 
-The reference catalog lives in
-[shoulders-ai/mim-apps](https://github.com/shoulders-ai/mim-apps), one app per
-`packages/<id>/`. `index.json` is the publication boundary. The compatibility
-suite stages every published app as a Mim-origin app and exercises the current
-loader/runtime contract.
-
-- **Board** — issues model, `issues.*` named tools.
-- **Knowledge** — knowledge model, `knowledge.*` named tools.
-- **Slides** — deck generation via `render.htmlToPdf`, planner-first backend, design critique.
-- **DOCX Review** — multi-agent peer review over core DOCX tools.
-- **Scholar** — systematic literature search across academic DBs.
-- **References** — DOI/PDF capture, managed library, `references.*` tools.
-- **Import-MD** — file import UI over core `documents.importMarkdown`.
+Each company may maintain a separate Team repository with apps under
+`apps/<id>/` and a generated `team-index.json` release boundary. Core has no
+company app catalog. `scripts/team-compat.test.ts` stages every indexed Team
+app into the real loader/runtime, named-tool path, and app-root `compat.mjs`
+hooks. The Team repository owns its validation, version bumps, index
+generation, and current-Mim compatibility workflow.
 
 ### Documentation Pipeline
 
-- **Docs generators.** Deterministic scripts that generate developer documentation pages from source data. App generation uses `mim-apps/index.json` as its publication boundary, so ignored or local-only app directories cannot enter public docs. `scripts/docs-gen/`. Run via `npm run docs:gen` (requires `npm run build` for the tool catalog).
+- **Docs generators.** Deterministic scripts generate shortcuts, models, and the core tool catalog from source data. Optional company apps are not published in the core manual. `scripts/docs-gen/`. Run via `npm run docs:gen` (requires `npm run build` for the tool catalog).
 - **Claim lint.** Validates manual page claims (tool names, shortcuts, settings refs, internal links) against source of truth. `scripts/docs-lint.mjs`. Run via `npm run docs:lint`.
-- **Continuous verification.** Pushes and pull requests run the full suite, the real `mim-apps` compatibility harness, production build, generated-doc drift check, and claim lint. `.github/workflows/test.yml`.
+- **Continuous verification.** Core pushes and pull requests run the full suite, production build, generated-doc drift check, and claim lint. Each Team runs its app tests and the generic current-Mim Team compatibility harness in its own workflow. `.github/workflows/test.yml`.
 
 ### Docs Index
 
@@ -294,9 +287,11 @@ src/
       stdio.ts                  # MCP stdio bridge
       discovery.ts              # ~/.mim/server.json helpers
     team/
-      teamSource.ts             # One Team connection, checkout contract + Git sync
+      teamSource.ts             # One Team connection, check/publish/update Git lifecycle
+      teamRelease.ts            # Release index parsing + human change comparison
+      teamReleaseContents.ts    # Release digest/access integrity verification
       teamFiles.ts              # Safe Project checkout mount + Team Files root
-      liveTeamRefresh.ts        # Refresh apps/tools/routines after Team changes
+      liveTeamRefresh.ts        # Refresh apps/tools/routines after accepted updates
     sync/
       backgroundSync.ts         # Open/save/quit sync lifecycle and offline retry
       conflicts.ts              # Rebase conflict-copy preservation + stop state
@@ -500,7 +495,7 @@ scripts/
     toolCatalog.mjs             # Tool catalog from headless registry + gate.ts
     shortcuts.mjs               # Shortcuts from ShortcutsDialog.vue
     models.mjs                  # Models from resources/ai-models.json
-    apps.mjs                    # Catalogued apps from mim-apps index + manifests
+  team-compat.test.ts           # Optional Team apps against the real runtime
   docs-lint.mjs                 # Claim lint for manual pages
 
 manual/
@@ -511,7 +506,6 @@ manual/
   develop/
     tools.md                    # Generated tool catalog
     models.md                   # Generated models page
-    apps.md                     # Generated apps page
 
 docs/                           # Implementation docs (see Docs Index above)
 ```
