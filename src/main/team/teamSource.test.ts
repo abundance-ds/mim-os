@@ -265,6 +265,8 @@ describe('Team connection and updates', () => {
       update: { state: 'unknown' },
     })
     await expect(client.check()).resolves.toMatchObject({
+      state: 'synced',
+      message: 'A Team update is available.',
       update: {
         state: 'available',
         changes: [{ kind: 'instructions', action: 'added' }],

@@ -316,7 +316,7 @@ export function createTeamSource(options: CreateTeamSourceOptions = {}): TeamSou
       .filter(Boolean)
     const state: TeamSourceState = conflicts.length > 0
       ? 'stopped'
-      : dirty || ahead > 0 || behind > 0
+      : dirty || ahead > 0
         ? 'needs-sync'
         : 'synced'
     const update = await resolveUpdateStatus(
