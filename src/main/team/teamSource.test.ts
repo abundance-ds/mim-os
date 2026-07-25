@@ -11,7 +11,7 @@ import {
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { reset as resetUserConfig } from '@main/userConfig.js'
+import { reset as resetUserConfig, setTeamConnection } from '@main/userConfig.js'
 import {
   createTeamSource,
   repositoryUsesGitLfs,
@@ -226,6 +226,60 @@ describe('Team connection and updates', () => {
     await expect(source.connect(remote)).rejects.toThrow('team.yaml')
     expect(existsSync(teamCheckoutPath(home))).toBe(false)
     expect(existsSync(join(home, '.mim', 'config.yaml'))).toBe(false)
+  })
+
+  it('upgrades a connected Team checkout created before release indexes', async () => {
+    const sourceDir = join(root, 'legacy-source')
+    const remote = join(root, 'legacy.git')
+    const home = join(root, 'home')
+    const checkout = teamCheckoutPath(home)
+    mkdirSync(sourceDir)
+    mkdirSync(home)
+    git(['init', '--initial-branch=main'], sourceDir)
+    git(['config', 'user.name', 'Mim Team Test'], sourceDir)
+    git(['config', 'user.email', 'team-test@example.com'], sourceDir)
+    writeFileSync(join(sourceDir, 'team.yaml'), 'name: Shoulders\n')
+    writeFileSync(join(sourceDir, 'instructions.md'), '# Existing guidance\n')
+    for (const dir of ['files', 'skills', 'apps', 'routines']) {
+      mkdirSync(join(sourceDir, dir))
+      writeFileSync(join(sourceDir, dir, '.gitkeep'), '')
+    }
+    git(['add', '-A'], sourceDir)
+    git(['commit', '-m', 'Legacy Team'], sourceDir)
+    git(['init', '--bare', '--initial-branch=main', remote])
+    git(['remote', 'add', 'origin', remote], sourceDir)
+    git(['push', '-u', 'origin', 'main'], sourceDir)
+    mkdirSync(join(home, '.mim'))
+    git(['clone', remote, checkout])
+    setTeamConnection({ repository: remote }, home)
+
+    writeTeamIndex(sourceDir)
+    git(['add', 'team-index.json'], sourceDir)
+    git(['commit', '-m', 'Publish first indexed release'], sourceDir)
+    git(['push'], sourceDir)
+
+    const client = createTeamSource({ homeDir: home })
+    await expect(client.status()).resolves.toMatchObject({
+      state: 'synced',
+      team: { name: 'Shoulders' },
+      update: { state: 'unknown' },
+    })
+    await expect(client.check()).resolves.toMatchObject({
+      update: {
+        state: 'available',
+        changes: [{ kind: 'instructions', action: 'added' }],
+      },
+    })
+
+    const updated = await client.update()
+    expect(existsSync(join(checkout, 'team-index.json'))).toBe(true)
+    expect(updated).toMatchObject({
+      state: 'synced',
+      update: {
+        state: 'current',
+        recentChanges: [{ kind: 'instructions', action: 'added' }],
+      },
+    })
   })
 
   it('publishes local Team edits and applies remote Team updates only when requested', async () => {

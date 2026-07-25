@@ -120,6 +120,10 @@ export function teamCheckoutPath(home = userHomeDir()): string {
 }
 
 export function resolveTeamCheckout(root: string): TeamCheckout {
+  return resolveTeamCheckoutLayout(root, true)
+}
+
+function resolveTeamCheckoutLayout(root: string, releaseRequired: boolean): TeamCheckout {
   const manifestPath = join(root, 'team.yaml')
   requireRegularFile(manifestPath, 'team.yaml is required')
 
@@ -138,10 +142,14 @@ export function resolveTeamCheckout(root: string): TeamCheckout {
   }
   const name = nameValue.trim()
   const indexPath = join(root, 'team-index.json')
-  requireRegularFile(indexPath, 'team-index.json is required')
-  const release = parseTeamRelease(readFileSync(indexPath, 'utf-8'))
-  if (release.team !== name) {
-    throw new Error('team-index.json team must match team.yaml name')
+  if (existsSync(indexPath)) {
+    requireRegularFile(indexPath, 'team-index.json must be a regular file')
+    const release = parseTeamRelease(readFileSync(indexPath, 'utf-8'))
+    if (release.team !== name) {
+      throw new Error('team-index.json team must match team.yaml name')
+    }
+  } else if (releaseRequired) {
+    throw new Error('team-index.json is required')
   }
 
   const instructionsPath = join(root, 'instructions.md')
@@ -239,8 +247,14 @@ export function createTeamSource(options: CreateTeamSourceOptions = {}): TeamSou
     }
 
     let team: TeamCheckout
+    let indexedRelease = true
     try {
-      team = resolveTeamCheckout(root)
+      if (existsSync(join(root, 'team-index.json'))) {
+        team = resolveTeamCheckout(root)
+      } else {
+        team = resolveTeamCheckoutLayout(root, false)
+        indexedRelease = false
+      }
       const origin = await gitMaybe(root, ['remote', 'get-url', 'origin'])
       if (origin !== configured) {
         return {
@@ -305,7 +319,13 @@ export function createTeamSource(options: CreateTeamSourceOptions = {}): TeamSou
       : dirty || ahead > 0 || behind > 0
         ? 'needs-sync'
         : 'synced'
-    const update = await resolveUpdateStatus(root, team.name, lastCheckedAt, receiptPath)
+    const update = await resolveUpdateStatus(
+      root,
+      team.name,
+      lastCheckedAt,
+      receiptPath,
+      indexedRelease,
+    )
 
     return {
       state,
@@ -319,7 +339,9 @@ export function createTeamSource(options: CreateTeamSourceOptions = {}): TeamSou
       conflicts,
       retryable: false,
       message: state === 'synced'
-        ? update.state === 'available' ? 'A Team update is available.' : 'Up to date.'
+        ? update.state === 'available'
+          ? 'A Team update is available.'
+          : indexedRelease ? 'Up to date.' : 'Checking for the first Team update.'
         : state === 'stopped'
           ? 'Team changes need attention.'
           : 'Your Team changes are waiting to be published.',
@@ -401,6 +423,12 @@ export function createTeamSource(options: CreateTeamSourceOptions = {}): TeamSou
     if (before.state === 'invalid') throw new Error(before.message)
     if (before.git.lfsRequired && !before.git.lfsAvailable) throw new Error(before.message)
     if (before.conflicts.length > 0) return before
+    if (!existsSync(join(root, 'team-index.json'))) {
+      return {
+        ...before,
+        message: 'Install the available Team update before publishing Team changes.',
+      }
+    }
 
     try {
       await gitExec(root, ['add', '-A'])
@@ -447,7 +475,9 @@ export function createTeamSource(options: CreateTeamSourceOptions = {}): TeamSou
     if (before.state === 'invalid') throw new Error(before.message)
     if (before.git.lfsRequired && !before.git.lfsAvailable) throw new Error(before.message)
     if (before.conflicts.length > 0) return before
-    const beforeRelease = readLocalRelease(root)
+    const beforeRelease = existsSync(join(root, 'team-index.json'))
+      ? readLocalRelease(root)
+      : emptyTeamRelease(before.team?.name ?? 'Team')
 
     try {
       await gitExec(root, ['add', '-A'])
@@ -533,8 +563,9 @@ async function resolveUpdateStatus(
   teamName: string,
   checkedAt: string | null,
   receiptPath: string,
+  indexedRelease: boolean,
 ): Promise<TeamSourceStatus['update']> {
-  const local = readLocalRelease(root)
+  const local = indexedRelease ? readLocalRelease(root) : emptyTeamRelease(teamName)
   try {
     const remote = await readRemoteRelease(root)
     if (!remote) return { state: 'unknown', changes: [], checkedAt }
@@ -566,6 +597,18 @@ async function resolveUpdateStatus(
       checkedAt,
       error: error instanceof Error ? error.message : String(error),
     }
+  }
+}
+
+function emptyTeamRelease(team: string): TeamReleaseIndex {
+  return {
+    manifestVersion: 1,
+    team,
+    apps: [],
+    skills: [],
+    routines: [],
+    files: [],
+    instructions: null,
   }
 }
 

@@ -70,6 +70,11 @@ permissions, and the shared routine/file/instruction set. Before changing the
 installed checkout, Mim opens the remote revision separately and verifies that
 the complete content matches the index.
 
+An already-connected checkout created before release indexes remains usable.
+Mim can fetch its first indexed release, presents that release as an available
+update, and installs it through the same validation path. New connections
+always require a valid index.
+
 ## Team repository workflow
 
 The Team repository owns its apps and skills. It does not promote them from a
