@@ -110,9 +110,7 @@ jobs:
         run: npm run dist:${{ matrix.platform }} -- ${{ matrix.build_args }} --publish never
 
       - name: Verify update metadata
-        env:
-          UPDATE_MANIFEST: ${{ matrix.update_manifest }}
-        run: node scripts/verify-update-artifacts.mjs dist-installers "$UPDATE_MANIFEST"
+        run: node scripts/verify-update-artifacts.mjs dist-installers "${{ matrix.update_manifest }}"
 
       - name: Upload artifacts
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
