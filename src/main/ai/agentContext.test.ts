@@ -170,10 +170,10 @@ describe('renderAgentContext', () => {
   it('renders the one Team name and writable Files path without policies or statuses', () => {
     const out = renderAgentContext(
       baseData({
-        team: { name: 'Shoulders', filesPath: '.mim/team/files' },
+        team: { name: 'Acme Research', filesPath: '.mim/team/files' },
       }),
     )
-    expect(out).toContain('## Team: Shoulders')
+    expect(out).toContain('## Team: Acme Research')
     expect(out).toContain('.mim/team/files')
     expect(out).toContain('writable')
     expect(out).not.toContain('readonly')
@@ -282,9 +282,9 @@ describe('gatherAgentContext', () => {
     const data = gatherAgentContext(dir, {
       now: () => NOW_MS,
       readRecentChanges: () => [],
-      readTeam: () => ({ name: 'Shoulders', filesPath: '.mim/team/files' }),
+      readTeam: () => ({ name: 'Acme Research', filesPath: '.mim/team/files' }),
     })
-    expect(data.team).toEqual({ name: 'Shoulders', filesPath: '.mim/team/files' })
+    expect(data.team).toEqual({ name: 'Acme Research', filesPath: '.mim/team/files' })
   })
 
   it('passes through trace health from the injected reader', () => {
@@ -559,12 +559,12 @@ describe('renderAgentContext — app sections', () => {
     const data = baseData({
       apps: [{ id: 'knowledge', enabled: true }],
       appSections: [{ appId: 'test', title: 'Test Section', body: 'Body here.' }],
-      team: { name: 'Shoulders', filesPath: '.mim/team/files' },
+      team: { name: 'Acme Research', filesPath: '.mim/team/files' },
     })
     const out = renderAgentContext(data)
     const appsPos = out.indexOf('Apps enabled:')
     const sectionPos = out.indexOf('## Test Section')
-    const teamPos = out.indexOf('## Team: Shoulders')
+    const teamPos = out.indexOf('## Team: Acme Research')
     expect(appsPos).toBeLessThan(sectionPos)
     expect(sectionPos).toBeLessThan(teamPos)
   })

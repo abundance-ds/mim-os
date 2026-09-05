@@ -56,7 +56,7 @@ describe('Team release content integrity', () => {
   })
 
   it('rebuilds the deterministic release boundary from actual Team content', () => {
-    const index = buildTeamReleaseIndex(root, 'Shoulders')
+    const index = buildTeamReleaseIndex(root, 'Acme Research')
 
     expect(index.apps[0]).toMatchObject({
       id: 'knowledge',
@@ -70,17 +70,17 @@ describe('Team release content integrity', () => {
   })
 
   it('rejects an index that hides changed code or declared access', () => {
-    const index = buildTeamReleaseIndex(root, 'Shoulders')
+    const index = buildTeamReleaseIndex(root, 'Acme Research')
     writeFileSync(join(root, 'apps', 'knowledge', 'backend', 'index.mjs'), 'export const tools = { changed: true }\n')
     expect(() => assertTeamReleaseContents(root, index)).toThrow('does not match')
 
-    const current = buildTeamReleaseIndex(root, 'Shoulders')
+    const current = buildTeamReleaseIndex(root, 'Acme Research')
     current.apps[0].permissions = {}
     expect(() => assertTeamReleaseContents(root, current)).toThrow('does not match')
   })
 
   it('rejects contribution symlinks instead of releasing content outside the Team', () => {
     symlinkSync(join(root, 'instructions.md'), join(root, 'files', 'linked.md'))
-    expect(() => buildTeamReleaseIndex(root, 'Shoulders')).toThrow('symbolic links')
+    expect(() => buildTeamReleaseIndex(root, 'Acme Research')).toThrow('symbolic links')
   })
 })

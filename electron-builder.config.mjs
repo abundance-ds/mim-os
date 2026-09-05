@@ -75,6 +75,7 @@ export default {
     ...azureSign,
   },
   nsis: {
+    artifactName: '${productName}-Setup-${version}.${ext}',
     oneClick: false,
     perMachine: false,
     allowToChangeInstallationDirectory: true,
@@ -101,7 +102,7 @@ export default {
 
   publish: {
     provider: 'github',
-    owner: 'shoulders-ai',
+    owner: 'abundance-ds',
     repo: 'mim-os',
   },
 }

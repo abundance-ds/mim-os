@@ -204,7 +204,7 @@ describe('Slack tools', () => {
     })
     registerSlackTools(tools, {
       secrets,
-      http: fakeHttp({ ok: true, team: 'Shoulders', user: 'mim2', user_id: 'U1', bot_id: 'B1', team_id: 'T1' }, calls),
+      http: fakeHttp({ ok: true, team: 'Acme Research', user: 'mim2', user_id: 'U1', bot_id: 'B1', team_id: 'T1' }, calls),
     })
 
     const result = await tools.call('slack.bot.status', {}, ctx) as Record<string, unknown>
@@ -214,7 +214,7 @@ describe('Slack tools', () => {
       configured: true,
       botTokenConfigured: true,
       appTokenConfigured: true,
-      auth: { ok: true, team: 'Shoulders', user: 'mim2', user_id: 'U1', bot_id: 'B1', team_id: 'T1' },
+      auth: { ok: true, team: 'Acme Research', user: 'mim2', user_id: 'U1', bot_id: 'B1', team_id: 'T1' },
     })
     expect(calls).toHaveLength(1)
     expect(String(calls[0].url)).toContain('auth.test')
@@ -239,8 +239,8 @@ describe('Slack tools', () => {
           return {
             ok: true,
             status: 200,
-            async json() { return { ok: true, team: 'Shoulders', user: 'mim2', user_id: 'U1', bot_id: 'B1', team_id: 'T1' } },
-            async text() { return '{"ok":true,"team":"Shoulders","user":"mim2","user_id":"U1","bot_id":"B1","team_id":"T1"}' },
+            async json() { return { ok: true, team: 'Acme Research', user: 'mim2', user_id: 'U1', bot_id: 'B1', team_id: 'T1' } },
+            async text() { return '{"ok":true,"team":"Acme Research","user":"mim2","user_id":"U1","bot_id":"B1","team_id":"T1"}' },
           }
         },
       },
@@ -258,7 +258,7 @@ describe('Slack tools', () => {
       configured: true,
       botConfigured: true,
       socketModeConfigured: true,
-      auth: { ok: true, team: 'Shoulders', user: 'mim2', user_id: 'U1', bot_id: 'B1', team_id: 'T1' },
+      auth: { ok: true, team: 'Acme Research', user: 'mim2', user_id: 'U1', bot_id: 'B1', team_id: 'T1' },
     })
     expect(JSON.stringify(result)).not.toContain('wss://')
     expect(secrets.dump()).toEqual({
@@ -297,8 +297,8 @@ describe('Slack tools', () => {
           return {
             ok: true,
             status: 200,
-            async json() { return { ok: true, team: 'Shoulders', user: 'mim2' } },
-            async text() { return '{"ok":true,"team":"Shoulders","user":"mim2"}' },
+            async json() { return { ok: true, team: 'Acme Research', user: 'mim2' } },
+            async text() { return '{"ok":true,"team":"Acme Research","user":"mim2"}' },
           }
         },
       },
@@ -363,8 +363,8 @@ describe('Slack tools', () => {
           return {
             ok: true,
             status: 200,
-            async json() { return { ok: true, team: 'Shoulders', user: 'mim2', user_id: 'U1', bot_id: 'B1', team_id: 'T1' } },
-            async text() { return '{"ok":true,"team":"Shoulders","user":"mim2","user_id":"U1","bot_id":"B1","team_id":"T1"}' },
+            async json() { return { ok: true, team: 'Acme Research', user: 'mim2', user_id: 'U1', bot_id: 'B1', team_id: 'T1' } },
+            async text() { return '{"ok":true,"team":"Acme Research","user":"mim2","user_id":"U1","bot_id":"B1","team_id":"T1"}' },
           }
         },
       },

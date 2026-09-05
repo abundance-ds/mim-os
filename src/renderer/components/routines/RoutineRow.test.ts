@@ -63,12 +63,12 @@ describe('RoutineRow', () => {
     const root = document.createElement('div')
     const app = createApp(RoutineRow, {
       routine: routine({ origin: 'team', owner: 'always-on-mac' }),
-      sourceLabel: 'Shoulders',
+      sourceLabel: 'Acme Research',
     })
     app.use(createPinia())
     app.mount(root)
 
-    expect(root.textContent).toContain('Shoulders')
+    expect(root.textContent).toContain('Acme Research')
     expect(root.textContent).toContain('Runs on always-on-mac')
     app.unmount()
   })

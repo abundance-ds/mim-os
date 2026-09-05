@@ -468,7 +468,7 @@ describe('skill tools', () => {
 
   it('creates skills in You, Project, and Team destinations with normal editor paths', async () => {
     mkdirSync(join(home, '.mim', 'team'), { recursive: true })
-    writeFileSync(join(home, '.mim', 'team', 'team.yaml'), 'name: Shoulders\n')
+    writeFileSync(join(home, '.mim', 'team', 'team.yaml'), 'name: Acme Research\n')
 
     const personal = await tools.call('skill.create', { name: 'personal-style' }, ctx) as { skill: Record<string, unknown> }
     const project = await tools.call('skill.create', { name: 'project-review', destination: 'project' }, ctx) as { skill: Record<string, unknown> }
@@ -491,13 +491,13 @@ describe('skill tools', () => {
 
   it('lists instruction origins and creates optional Team instructions on open', async () => {
     mkdirSync(join(home, '.mim', 'team'), { recursive: true })
-    writeFileSync(join(home, '.mim', 'team', 'team.yaml'), 'name: Shoulders\n')
+    writeFileSync(join(home, '.mim', 'team', 'team.yaml'), 'name: Acme Research\n')
     writeFileSync(join(workspaceDir, 'mim.yaml'), 'name: Alpha\n')
 
     const listed = await tools.call('instruction.list', {}, ctx) as { instructions: Array<Record<string, unknown>> }
     expect(listed.instructions).toEqual([
       expect.objectContaining({ origin: 'personal', label: 'You', writable: true }),
-      expect.objectContaining({ origin: 'team', label: 'Shoulders', writable: true }),
+      expect.objectContaining({ origin: 'team', label: 'Acme Research', writable: true }),
       expect.objectContaining({ origin: 'project', label: 'Alpha', writable: true }),
       expect.objectContaining({ origin: 'mim', label: 'Mim', writable: false }),
     ])

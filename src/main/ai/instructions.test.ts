@@ -20,7 +20,7 @@ describe('instruction origins', () => {
     workspace = join(root, 'project')
     mkdirSync(join(home, '.mim', 'team'), { recursive: true })
     mkdirSync(workspace, { recursive: true })
-    writeFileSync(join(home, '.mim', 'team', 'team.yaml'), 'name: Shoulders\n')
+    writeFileSync(join(home, '.mim', 'team', 'team.yaml'), 'name: Acme Research\n')
   })
 
   afterEach(() => {
@@ -35,9 +35,9 @@ describe('instruction origins', () => {
     const docs = loadInstructionDocuments({ workspacePath: workspace, homeDir: home })
 
     expect(docs.map(doc => doc.origin)).toEqual(['mim', 'team', 'personal', 'project'])
-    expect(docs.map(doc => doc.label)).toEqual(['Mim', 'Shoulders', 'You', 'Project'])
+    expect(docs.map(doc => doc.label)).toEqual(['Mim', 'Acme Research', 'You', 'Project'])
     expect(composeInstructions(docs)).toMatch(
-      /MIM INSTRUCTIONS[\s\S]*TEAM INSTRUCTIONS — Shoulders[\s\S]*PERSONAL INSTRUCTIONS — You[\s\S]*PROJECT INSTRUCTIONS — Project/,
+      /MIM INSTRUCTIONS[\s\S]*TEAM INSTRUCTIONS — Acme Research[\s\S]*PERSONAL INSTRUCTIONS — You[\s\S]*PROJECT INSTRUCTIONS — Project/,
     )
   })
 

@@ -51,7 +51,7 @@ describe('SkillsSettingsPanel', () => {
         name: 'team-review',
         description: 'Review Team work.',
         source: 'team',
-        sourceName: 'Shoulders',
+        sourceName: 'Acme Research',
         editorPath: '.mim/team/skills/team-review/SKILL.md',
         enabled: true,
         shadows: [],
@@ -69,7 +69,7 @@ describe('SkillsSettingsPanel', () => {
     call = vi.fn(async (tool: string, params?: Record<string, unknown>) => {
       if (tool === 'skill.list') return { skills: skills.map(skill => ({ ...skill })), diagnostics: [] }
       if (tool === 'workspace.info') return { name: 'Alpha' }
-      if (tool === 'team.status') return { connected: true, team: { name: 'Shoulders' } }
+      if (tool === 'team.status') return { connected: true, team: { name: 'Acme Research' } }
       if (tool === 'skill.setDisabled') {
         const item = skills.find(skill => skill.name === params?.name)
         if (item) item.enabled = params?.disabled !== true
@@ -125,7 +125,7 @@ describe('SkillsSettingsPanel', () => {
     expect(call).toHaveBeenCalledWith('skill.list', { detailed: true })
     expect(root.textContent).toContain('issue-work')
     expect(root.textContent).toContain('You')
-    expect(root.textContent).toContain('Shoulders')
+    expect(root.textContent).toContain('Acme Research')
     expect(root.textContent).toContain('Mim')
     expect(root.textContent).not.toContain('Add a source')
 

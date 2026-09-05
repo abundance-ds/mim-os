@@ -6,7 +6,7 @@ describe('electron-builder updater configuration', () => {
   it('uses GitHub publish config for built-in updater metadata', () => {
     expect(config.publish).toEqual({
       provider: 'github',
-      owner: 'shoulders-ai',
+      owner: 'abundance-ds',
       repo: 'mim-os',
     })
     expect(config.afterPack).toBeUndefined()
@@ -19,6 +19,10 @@ describe('electron-builder updater configuration', () => {
 
   it('builds Linux installers for x64 and arm64', () => {
     expect(config.linux.target).toEqual(['AppImage', 'deb', 'tar.gz'])
+  })
+
+  it('uses a GitHub-safe Windows artifact name that matches updater metadata', () => {
+    expect(config.nsis.artifactName).toBe('${productName}-Setup-${version}.${ext}')
   })
 
   it('packages app iframe SDK assets', () => {
@@ -41,6 +45,12 @@ describe('electron-builder updater configuration', () => {
     expect(workflow).toContain("build_args: '--x64'")
     expect(workflow).toContain("build_args: '--arm64'")
     expect(workflow).toContain('label: Linux ARM64')
+    expect(workflow).toContain('actions/checkout@v5')
+    expect(workflow).toContain('actions/setup-node@v5')
+    expect(workflow).toContain('actions/setup-dotnet@v5')
+    expect(workflow).toContain('actions/upload-artifact@v6')
+    expect(workflow).toContain('node scripts/verify-update-artifacts.mjs dist-installers "$UPDATE_MANIFEST"')
+    expect(workflow).toContain("update_manifest: 'latest-linux-arm64.yml'")
     expect(workflow).toContain('label: macOS')
     expect(workflow).not.toContain('label: macOS ARM')
     expect(workflow).not.toContain('label: macOS Intel')

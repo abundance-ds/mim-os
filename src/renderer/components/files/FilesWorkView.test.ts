@@ -865,7 +865,7 @@ describe('FilesWorkView', () => {
       }
       if (tool === 'fs.list') return { entries: [], truncated: false }
       if (tool === 'team.status') {
-        return { state: 'synced', team: { name: 'Shoulders' } }
+        return { state: 'synced', team: { name: 'Acme Research' } }
       }
       if (tool === 'search.files') return { results: [] }
       return { entries: [] }
@@ -875,7 +875,7 @@ describe('FilesWorkView', () => {
     await flushUi()
 
     const header = mounted.root.querySelector<HTMLElement>('[data-testid="files-team-header"]')
-    expect(header?.textContent).toContain('Shoulders')
+    expect(header?.textContent).toContain('Acme Research')
     expect(header?.textContent).not.toMatch(/\b1\b/)
 
     expect(header?.className).toContain('sticky')

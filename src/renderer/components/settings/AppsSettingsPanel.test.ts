@@ -42,7 +42,7 @@ describe('Apps & agents direct sources', () => {
       }
       if (tool === 'package.capabilities.list') return { packages: [] }
       if (tool === 'app.templateList') return { templates: [] }
-      if (tool === 'team.status') return { team: { name: 'Shoulders' } }
+      if (tool === 'team.status') return { team: { name: 'Acme Research' } }
       if (tool === 'agent.list') return { agents: [] }
       return {}
     })
@@ -70,7 +70,7 @@ describe('Apps & agents direct sources', () => {
   it('labels direct origins with the Project, actual Team, and Mim', async () => {
     await settle()
     expect(root.querySelector('[data-testid="app-origin-built-in"]')?.textContent).toBe('Mim')
-    expect(root.querySelector('[data-testid="app-origin-shared"]')?.textContent).toBe('Shoulders')
+    expect(root.querySelector('[data-testid="app-origin-shared"]')?.textContent).toBe('Acme Research')
     expect(root.querySelector('[data-testid="app-origin-local"]')?.textContent).toBe('Acme Proposal')
   })
 
@@ -79,8 +79,8 @@ describe('Apps & agents direct sources', () => {
     root.querySelector<HTMLButtonElement>('[data-testid="apps-row-shared"]')?.click()
     await nextTick()
 
-    expect(root.textContent).toContain('Managed by Shoulders')
-    expect(root.textContent).not.toContain('Updates with Shoulders sync')
+    expect(root.textContent).toContain('Managed by Acme Research')
+    expect(root.textContent).not.toContain('Updates with Acme Research sync')
   })
 
   it('uses only direct-source app tools', async () => {

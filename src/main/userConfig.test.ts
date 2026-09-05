@@ -47,7 +47,7 @@ describe('userConfig — loadUserConfig', () => {
       '  editorFontSize: 18',
       '  automationApprovalMode: strict',
       'team:',
-      '  repository: git@github.com:shoulders-ai/team.git',
+      '  repository: git@github.com:example-org/team.git',
       '',
     ].join('\n'))
 
@@ -63,7 +63,7 @@ describe('userConfig — loadUserConfig', () => {
     expect(config.preferences.theme).toBe('sage')
     expect(config.preferences.editorFontSize).toBe(18)
     expect(config.preferences.automationApprovalMode).toBe('strict')
-    expect(config.team).toEqual({ repository: 'git@github.com:shoulders-ai/team.git' })
+    expect(config.team).toEqual({ repository: 'git@github.com:example-org/team.git' })
   })
 
   it('writes Personal settings without disturbing identity, skill toggles, or model defaults', () => {
@@ -101,10 +101,10 @@ describe('userConfig — loadUserConfig', () => {
       '',
     ].join('\n'))
 
-    setTeamConnection({ repository: 'git@github.com:shoulders-ai/team.git' }, home)
+    setTeamConnection({ repository: 'git@github.com:example-org/team.git' }, home)
 
     const config = loadUserConfig(home)
-    expect(config.team).toEqual({ repository: 'git@github.com:shoulders-ai/team.git' })
+    expect(config.team).toEqual({ repository: 'git@github.com:example-org/team.git' })
     expect(config.user.name).toBe('Paul')
     expect(config.preferences.theme).toBe('nord')
   })

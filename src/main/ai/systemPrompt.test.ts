@@ -41,7 +41,7 @@ describe('getSystemPrompt', () => {
 
   it('composes Mim, Team, Personal, and Project instructions in precedence order', () => {
     mkdirSync(join(home, '.mim', 'team'), { recursive: true })
-    writeFileSync(join(home, '.mim', 'team', 'team.yaml'), 'name: Shoulders\n')
+    writeFileSync(join(home, '.mim', 'team', 'team.yaml'), 'name: Acme Research\n')
     writeFileSync(join(home, '.mim', 'team', 'instructions.md'), 'TEAM BODY')
     writeFileSync(join(home, '.mim', 'instructions.md'), 'PERSONAL BODY')
     writeFileSync(join(dir, 'AGENTS.md'), 'CONTRACT BODY HERE')
@@ -49,7 +49,7 @@ describe('getSystemPrompt', () => {
     writeFileSync(join(dir, '.mim', 'agent-context.md'), 'CONTEXT BODY HERE')
     const out = getSystemPrompt(dir, { homeDir: home })
     expect(out).toMatch(
-      /# MIM INSTRUCTIONS[\s\S]*# TEAM INSTRUCTIONS — Shoulders[\s\S]*# PERSONAL INSTRUCTIONS — You[\s\S]*# PROJECT INSTRUCTIONS — Project/,
+      /# MIM INSTRUCTIONS[\s\S]*# TEAM INSTRUCTIONS — Acme Research[\s\S]*# PERSONAL INSTRUCTIONS — You[\s\S]*# PROJECT INSTRUCTIONS — Project/,
     )
     expect(out).toContain('TEAM BODY')
     expect(out).toContain('PERSONAL BODY')

@@ -8,7 +8,7 @@ import {
 function release(overrides: Partial<TeamReleaseIndex> = {}): TeamReleaseIndex {
   return {
     manifestVersion: 1,
-    team: 'Shoulders',
+    team: 'Acme Research',
     apps: [],
     skills: [],
     routines: [],

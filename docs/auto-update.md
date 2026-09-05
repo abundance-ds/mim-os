@@ -18,7 +18,7 @@ first-install artifact. Linux update checks only run when `APPIMAGE` is present.
 ## Build Metadata
 
 `electron-builder.config.mjs` has a GitHub `publish` config for
-`shoulders-ai/mim-os`. That makes electron-builder write:
+`abundance-ds/mim-os`. That makes electron-builder write:
 
 - packaged `app-update.yml`
 - `latest-mac.yml`
@@ -29,7 +29,10 @@ first-install artifact. Linux update checks only run when `APPIMAGE` is present.
 
 The release workflow still controls uploads manually. It runs electron-builder
 with `--publish never`, then uploads installers, zip files, blockmaps, and
-`latest*.yml` to the GitHub Release.
+`latest*.yml` to the GitHub Release. Before upload, it verifies that every file
+named by the platform's update manifest exists in the packaging output. The
+Windows NSIS artifact uses the explicit name `Mim-Setup-<version>.exe` so the
+manifest and GitHub asset name cannot diverge through filename normalization.
 
 macOS arm64 and x64 are built in one macOS job so electron-builder writes one
 arch-aware `latest-mac.yml` containing both zip files. Separate mac jobs would

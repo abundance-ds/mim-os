@@ -90,7 +90,7 @@ const EVALUATION_SITES: EvaluationSite[] = [
   site('instagram-login', 'login', 'https://www.instagram.com/example/', 'Login', 'Login to continue viewing photos and videos.'),
   site('researchgate-login', 'login', 'https://www.researchgate.net/publication/example', 'Sign in', 'Please sign in to read the publication.'),
   site('ft-login', 'login', 'https://www.ft.com/content/example', 'Sign in', 'Sign in to continue reading.'),
-  site('linear-loading', 'loading', 'https://linear.app/shoulders/team/SHO/active', 'Linear', 'Loading...'),
+  site('linear-loading', 'loading', 'https://linear.app/acme/team/SHO/active', 'Linear', 'Loading...'),
   site('stackoverflow-security', 'security', 'https://stackoverflow.com/questions/1', 'Just a moment...', 'Performing security verification before loading the question.'),
   site('reddit-captcha', 'captcha', 'https://www.reddit.com/r/programming/comments/example', 'Are you a robot?', 'Complete the captcha before continuing.'),
   site('ticketmaster-security', 'security', 'https://www.ticketmaster.com/event/example', 'Verify you are human', 'Security verification is required for this event page.'),

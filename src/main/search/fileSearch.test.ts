@@ -232,7 +232,7 @@ describe('File search — Team Files', () => {
     mkdirSync(join(source, 'files'))
     writeFileSync(join(source, 'files', 'team-brief.md'), 'The launch phrase is reusable seam.')
     const team = {
-      name: 'Shoulders',
+      name: 'Acme Research',
       root: source,
       filesPath: join(source, 'files'),
     } as TeamCheckout

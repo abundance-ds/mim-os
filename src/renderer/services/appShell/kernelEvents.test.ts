@@ -206,7 +206,7 @@ describe('app shell kernel events', () => {
     registerAppKernelEvents(kernel, deps)
 
     emit('team:update-available', {
-      teamName: 'Shoulders',
+      teamName: 'Acme Research',
       changes: [
         { kind: 'app', name: 'Knowledge', action: 'updated' },
         { kind: 'skill', name: 'Build App', action: 'updated' },
@@ -215,7 +215,7 @@ describe('app shell kernel events', () => {
 
     expect(deps.pushToast).toHaveBeenCalledWith(expect.objectContaining({
       kind: 'info',
-      message: 'Shoulders has an update',
+      message: 'Acme Research has an update',
       detail: 'Knowledge and Build App',
       actionLabel: 'Review',
       durationMs: null,

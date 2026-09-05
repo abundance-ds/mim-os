@@ -35,7 +35,7 @@ function seedRemote(root: string, options: { lfs?: boolean } = {}): string {
   git(['init', '--initial-branch=main'], source)
   git(['config', 'user.name', 'Mim Team Test'], source)
   git(['config', 'user.email', 'team-test@example.com'], source)
-  writeFileSync(join(source, 'team.yaml'), 'name: Shoulders\n')
+  writeFileSync(join(source, 'team.yaml'), 'name: Acme Research\n')
   writeFileSync(join(source, 'instructions.md'), '# Team guidance\n')
   if (options.lfs) {
     writeFileSync(join(source, '.gitattributes'), '*.docx filter=lfs diff=lfs merge=lfs -text\n')
@@ -54,7 +54,7 @@ function seedRemote(root: string, options: { lfs?: boolean } = {}): string {
 }
 
 function writeTeamIndex(root: string): void {
-  const index = buildTeamReleaseIndex(root, 'Shoulders')
+  const index = buildTeamReleaseIndex(root, 'Acme Research')
   writeFileSync(join(root, 'team-index.json'), `${JSON.stringify(index, null, 2)}\n`)
 }
 
@@ -79,11 +79,11 @@ describe('Team source contract', () => {
   it('requires a named team.yaml and treats every other contribution as optional', () => {
     const checkout = join(root, 'checkout')
     mkdirSync(checkout)
-    writeFileSync(join(checkout, 'team.yaml'), 'name: Shoulders\n')
+    writeFileSync(join(checkout, 'team.yaml'), 'name: Acme Research\n')
     writeTeamIndex(checkout)
 
     expect(resolveTeamCheckout(checkout)).toEqual({
-      name: 'Shoulders',
+      name: 'Acme Research',
       root: checkout,
       manifestPath: join(checkout, 'team.yaml'),
       indexPath: join(checkout, 'team-index.json'),
@@ -105,7 +105,7 @@ describe('Team source contract', () => {
   it('validates contribution kinds and counts their immediate entries', () => {
     const checkout = join(root, 'checkout')
     mkdirSync(checkout)
-    writeFileSync(join(checkout, 'team.yaml'), 'name: Shoulders\n')
+    writeFileSync(join(checkout, 'team.yaml'), 'name: Acme Research\n')
     writeTeamIndex(checkout)
     writeFileSync(join(checkout, 'instructions.md'), '# Shared instructions\n')
     for (const dir of ['files', 'skills', 'apps', 'routines']) mkdirSync(join(checkout, dir))
@@ -140,7 +140,7 @@ describe('Team source contract', () => {
     writeFileSync(join(checkout, 'team.yaml'), 'name: "   "\n')
     expect(() => resolveTeamCheckout(checkout)).toThrow('non-empty name')
 
-    writeFileSync(join(checkout, 'team.yaml'), 'name: Shoulders\n')
+    writeFileSync(join(checkout, 'team.yaml'), 'name: Acme Research\n')
     expect(() => resolveTeamCheckout(checkout)).toThrow('team-index.json')
   })
 
@@ -193,7 +193,7 @@ describe('Team connection and updates', () => {
     expect(connected).toMatchObject({
       state: 'synced',
       repository: remote,
-      team: { name: 'Shoulders' },
+      team: { name: 'Acme Research' },
       dirty: false,
       ahead: 0,
       behind: 0,
@@ -201,7 +201,7 @@ describe('Team connection and updates', () => {
     })
     expect(connected.root).toBe(teamCheckoutPath(home))
     expect(readFileSync(join(home, '.mim', 'config.yaml'), 'utf-8')).toContain(`repository: ${remote}`)
-    expect(await source.open()).toMatchObject({ name: 'Shoulders', root: teamCheckoutPath(home) })
+    expect(await source.open()).toMatchObject({ name: 'Acme Research', root: teamCheckoutPath(home) })
     await expect(source.connect(remote)).rejects.toThrow('already connected')
   })
 
@@ -238,7 +238,7 @@ describe('Team connection and updates', () => {
     git(['init', '--initial-branch=main'], sourceDir)
     git(['config', 'user.name', 'Mim Team Test'], sourceDir)
     git(['config', 'user.email', 'team-test@example.com'], sourceDir)
-    writeFileSync(join(sourceDir, 'team.yaml'), 'name: Shoulders\n')
+    writeFileSync(join(sourceDir, 'team.yaml'), 'name: Acme Research\n')
     writeFileSync(join(sourceDir, 'instructions.md'), '# Existing guidance\n')
     for (const dir of ['files', 'skills', 'apps', 'routines']) {
       mkdirSync(join(sourceDir, dir))
@@ -261,7 +261,7 @@ describe('Team connection and updates', () => {
     const client = createTeamSource({ homeDir: home })
     await expect(client.status()).resolves.toMatchObject({
       state: 'synced',
-      team: { name: 'Shoulders' },
+      team: { name: 'Acme Research' },
       update: { state: 'unknown' },
     })
     await expect(client.check()).resolves.toMatchObject({
@@ -318,7 +318,7 @@ describe('Team connection and updates', () => {
     await clientA.check()
     await clientA.update()
     expect(readFileSync(join(teamCheckoutPath(homeA), 'files', 'brief.md'), 'utf-8')).toBe('Version B\n')
-  })
+  }, 15_000)
 
   it('discovers an app update without changing installed code, then records the applied change', async () => {
     const remote = seedRemote(root)

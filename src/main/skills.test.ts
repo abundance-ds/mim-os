@@ -104,13 +104,13 @@ describe('filesystem skill loader', () => {
       builtinDir,
       personalDir,
       teamDir: sourceDir,
-      teamName: 'Shoulders',
+      teamName: 'Acme Research',
       getWorkspacePath: () => workspaceDir,
     })
 
     expect(loader.get('project-wins')).toMatchObject({ source: 'project', description: 'Project' })
     expect(loader.get('you-win')).toMatchObject({ source: 'personal', description: 'You' })
-    expect(loader.get('team-wins')).toMatchObject({ source: 'team', description: 'Team', sourceName: 'Shoulders' })
+    expect(loader.get('team-wins')).toMatchObject({ source: 'team', description: 'Team', sourceName: 'Acme Research' })
     expect(loader.get('mim-wins')).toMatchObject({ source: 'mim', description: 'Mim' })
   })
 

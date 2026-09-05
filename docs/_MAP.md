@@ -214,7 +214,7 @@ generation, and current-Mim compatibility workflow.
 | [app-system-api.md](app-system-api.md) | App system contract and author API |
 | [package-runtime.md](package-runtime.md) | App runtime architecture |
 | [docx-review-workflow.md](docx-review-workflow.md) | DOCX review workflow |
-| [auto-update.md](auto-update.md) | App auto-update and release builds |
+| [auto-update.md](auto-update.md) | App auto-update, release builds, and manifest-to-artifact verification |
 | [agent-sessions.md](agent-sessions.md) | CLI agent sessions |
 | [workbench-navigation.md](workbench-navigation.md) | Navigator/Work/Artifact pane model |
 | [workbench-layout.md](workbench-layout.md) | Layout handoff for agents |

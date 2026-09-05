@@ -35,31 +35,35 @@ jobs:
             platform: mac
             build_args: ''
             label: macOS
+            update_manifest: 'latest-mac.yml'
           - os: ubuntu-22.04
             platform: linux
             build_args: '--x64'
             label: Linux
+            update_manifest: 'latest-linux.yml'
           - os: ubuntu-24.04-arm
             platform: linux
             build_args: '--arm64'
             label: Linux ARM64
+            update_manifest: 'latest-linux-arm64.yml'
           - os: windows-latest
             platform: win
             build_args: '--x64'
             label: Windows
+            update_manifest: 'latest.yml'
 
     runs-on: ${{ matrix.os }}
     name: Build (${{ matrix.label }})
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '8.0.x'
 
@@ -105,9 +109,14 @@ jobs:
           AZURE_CERT_PROFILE_NAME: ${{ matrix.platform == 'win' && vars.AZURE_CERT_PROFILE_NAME || '' }}
         run: npm run dist:${{ matrix.platform }} -- ${{ matrix.build_args }} --publish never
 
+      - name: Verify update metadata
+        env:
+          UPDATE_MANIFEST: ${{ matrix.update_manifest }}
+        run: node scripts/verify-update-artifacts.mjs dist-installers "$UPDATE_MANIFEST"
+
       - name: Upload artifacts
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: app-${{ matrix.label }}
           path: |

@@ -93,7 +93,7 @@ describe('ChatMessage', () => {
                 body: '# Issue Work\n\nIssues are durable.',
                 tools: ['issues.list'],
                 source: 'team',
-                sourceName: 'Shoulders',
+                sourceName: 'Acme Research',
                 editorPath: '.mim/team/skills/issue-work/SKILL.md',
               },
             },
@@ -106,7 +106,7 @@ describe('ChatMessage', () => {
 
     expect(mounted.root.textContent).toContain('Using skill')
     expect(mounted.root.textContent).toContain('issue-work')
-    expect(mounted.root.textContent).toContain('Shoulders')
+    expect(mounted.root.textContent).toContain('Acme Research')
     // Instructions are collapsed until expanded.
     expect(mounted.root.textContent).not.toContain('Issues are durable')
 

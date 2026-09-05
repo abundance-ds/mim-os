@@ -29,6 +29,9 @@ Endpoint precedence:
 2. `~/.mim/config.yaml` `telemetry.endpoint`
 3. built-in `DEFAULT_TELEMETRY_ENDPOINT`
 
+The built-in endpoint is
+`https://mim.abundanceds.com/api/v1/telemetry/events`.
+
 Telemetry is disabled when:
 
 - `MIM_TELEMETRY_DISABLED=1` or `true`

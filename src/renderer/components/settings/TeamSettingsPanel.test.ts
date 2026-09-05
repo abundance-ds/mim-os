@@ -18,7 +18,7 @@ describe('TeamSettingsPanel', () => {
       checked: connectedStatus(),
     })
 
-    expect(root.textContent).toContain('Shoulders')
+    expect(root.textContent).toContain('Acme Research')
     expect(root.textContent).toContain('Up to date')
     expect(root.textContent).not.toContain('Sync')
     expect(root.textContent).not.toContain('automatically')
@@ -128,7 +128,7 @@ describe('TeamSettingsPanel', () => {
     const { app, call, root } = await mountPanel({
       status: {
         state: 'not-cloned',
-        repository: 'git@github.com:shoulders-ai/team.git',
+        repository: 'git@github.com:example-org/team.git',
         message: 'The local Team copy is missing.',
         team: null,
         update: { state: 'unknown', changes: [], checkedAt: null },
@@ -137,7 +137,7 @@ describe('TeamSettingsPanel', () => {
     })
 
     expect(call.mock.calls.map(args => args[0])).toEqual(['team.status', 'team.check'])
-    expect(root.textContent).toContain('Shoulders')
+    expect(root.textContent).toContain('Acme Research')
     expect(root.textContent).not.toContain('Connect your Team')
     app.unmount()
   })
@@ -146,7 +146,7 @@ describe('TeamSettingsPanel', () => {
     const { app, root } = await mountPanel({
       status: {
         state: 'not-cloned',
-        repository: 'git@github.com:shoulders-ai/team.git',
+        repository: 'git@github.com:example-org/team.git',
         message: 'Restoring the local Team copy.',
         team: null,
         update: { state: 'unknown', changes: [], checkedAt: null },
@@ -169,7 +169,7 @@ describe('TeamSettingsPanel', () => {
     }, revealInFinder)
 
     expect(root.querySelector('details')?.textContent).toContain('Developer details')
-    expect(root.querySelector('details')?.textContent).toContain('git@github.com:shoulders-ai/team.git')
+    expect(root.querySelector('details')?.textContent).toContain('git@github.com:example-org/team.git')
     root.querySelector<HTMLButtonElement>('[data-testid="team-open"]')?.click()
     await Promise.resolve()
     expect(revealInFinder).toHaveBeenCalledWith('/tmp/team')
@@ -184,10 +184,10 @@ function connectedStatus(update: Record<string, unknown> = {
 }) {
   return {
     state: 'synced',
-    repository: 'git@github.com:shoulders-ai/team.git',
+    repository: 'git@github.com:example-org/team.git',
     message: 'Up to date.',
     team: {
-      name: 'Shoulders',
+      name: 'Acme Research',
       root: '/tmp/team',
       contributions: { files: 3, skills: 2, apps: 1, routines: 4, instructions: true },
     },

@@ -24,6 +24,10 @@ describe('telemetry config', () => {
     rmSync(home, { recursive: true, force: true })
   })
 
+  it('uses the Abundance Decision Systems endpoint by default', () => {
+    expect(DEFAULT_TELEMETRY_ENDPOINT).toBe('https://mim.abundanceds.com/api/v1/telemetry/events')
+  })
+
   it('resolves endpoint precedence from env, config, then default', () => {
     writeConfig(home, 'telemetry:\n  endpoint: https://config.example/events\n')
 

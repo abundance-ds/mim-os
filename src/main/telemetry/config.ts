@@ -4,7 +4,7 @@ import { parse as parseYaml } from 'yaml'
 import { normalizePlatform } from './events.js'
 import { userHomeDir } from '@main/platform.js'
 
-export const DEFAULT_TELEMETRY_ENDPOINT = 'https://mim.shoulde.rs/api/v1/telemetry/events'
+export const DEFAULT_TELEMETRY_ENDPOINT = 'https://mim.abundanceds.com/api/v1/telemetry/events'
 
 export type TelemetryPlatform = 'macos' | 'windows' | 'linux'
 export type TelemetryRuntime = 'electron' | 'headless'

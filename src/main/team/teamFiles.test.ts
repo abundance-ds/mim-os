@@ -35,7 +35,7 @@ describe('Team Files mount', () => {
 
   function checkout(root = checkoutRoot): TeamCheckout {
     return {
-      name: 'Shoulders',
+      name: 'Acme Research',
       root,
       manifestPath: join(root, 'team.yaml'),
       instructionsPath: null,

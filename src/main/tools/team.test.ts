@@ -22,7 +22,7 @@ describe('Team tools', () => {
     source = {
       status: vi.fn(async () => ({ state: 'disconnected' })),
       connect: vi.fn(async (repository: string) => ({ state: 'synced', repository })),
-      open: vi.fn(async () => ({ name: 'Shoulders', root: '/home/.mim/team' })),
+      open: vi.fn(async () => ({ name: 'Acme Research', root: '/home/.mim/team' })),
       check: vi.fn(async () => ({
         state: 'needs-sync',
         update: {
@@ -56,7 +56,7 @@ describe('Team tools', () => {
     await expect(tools.call('team.connect', { repository: '/repos/team.git' }, ctx))
       .resolves.toEqual({ state: 'synced', repository: '/repos/team.git' })
     await expect(tools.call('team.open', {}, ctx))
-      .resolves.toEqual({ team: { name: 'Shoulders', root: '/home/.mim/team' } })
+      .resolves.toEqual({ team: { name: 'Acme Research', root: '/home/.mim/team' } })
     await expect(tools.call('team.check', {}, ctx)).resolves.toMatchObject({
       update: { state: 'available' },
     })
