@@ -41,6 +41,8 @@ describe('electron-builder updater configuration', () => {
     expect(workflow).toContain('dist-installers/latest*.yml')
     expect(workflow).toContain('node scripts/build-docx-worker.mjs osx-arm64')
     expect(workflow).toContain('node scripts/build-docx-worker.mjs osx-x64')
+    expect(workflow).toContain('os: macos-15')
+    expect(workflow).not.toContain('os: macos-latest')
     expect(workflow).toContain('os: ubuntu-24.04-arm')
     expect(workflow).toContain("build_args: '--x64'")
     expect(workflow).toContain("build_args: '--arm64'")
@@ -55,5 +57,12 @@ describe('electron-builder updater configuration', () => {
     expect(workflow).not.toContain('label: macOS ARM')
     expect(workflow).not.toContain('label: macOS Intel')
     expect(workflow).not.toContain('generate-update-manifests')
+  })
+
+  it('uses a stable Linux image for the test workflow', async () => {
+    const workflow = await readFile('.github/workflows/test.yml', 'utf8')
+
+    expect(workflow).toContain('runs-on: ubuntu-22.04')
+    expect(workflow).not.toContain('runs-on: ubuntu-latest')
   })
 })
