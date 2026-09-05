@@ -278,12 +278,8 @@ describeCompat('Team app compatibility', () => {
 })
 
 const compatHttpClient: HttpClient = {
-  async request(input) {
-    const url = new URL(input.url)
-    if (url.hostname === 'sf.shoulde.rs') {
-      return jsonResponse({ data: [] })
-    }
-    return jsonResponse({})
+  async request() {
+    return jsonResponse({ data: [] })
   },
 }
 
